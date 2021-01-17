@@ -1,0 +1,6 @@
+
+config.py
+output.mp4
+comments.txt
+errors.txt
+*.pyc
