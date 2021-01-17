@@ -84,7 +84,7 @@ def downloadytmp4(link, file=MP4FILE):
 
 
 def acr_create_link(title, artists, acrid):
-    """Parse title, artists, acrid into link to song"""
+    """Parse title, artists, ACR-ID into link to song"""
     url = ""
     spl = str(artists).split(" ")
     for i in range(len(spl)):
