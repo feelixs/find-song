@@ -114,8 +114,8 @@ def is_removed(comment):
         return True
     else:
         return False
-# As it's not possible to see if a comment was removed with praw, the bot looks at comments
-# with selenium, and lists the number of times a link with text 'View all comments' appears.
+# As it's not possible to see if a comment was removed as spam with praw, the bot looks at its
+# comments with selenium, and lists the number of times a link with text 'View all comments' appears.
 # If there are two links with the text, it was linked to a removed comment
 
 
@@ -185,7 +185,7 @@ def parse_response(data, start_sec):
             mstoMin(int(data['duration']))) + ")"
     else:
         re = "No song was found"
-    re += "*I started the search at {}, you can provide a timestamp in hour:min:sec to tell me where to search.*".format(start_sec)
+    re += "\n\n*I started the search at {}, you can provide a timestamp in hour:min:sec to tell me where to search.*".format(start_sec)
     # append to bottom of response, above footer
     return re + config.Reddit.footer
 
