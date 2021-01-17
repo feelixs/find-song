@@ -175,7 +175,7 @@ def get_song(file, start_sec):
         return j["status"]
 
 
-def parse_reponse(data):
+def parse_response(data):
     if str(data["title"]) != "":
         re = "[" + str(data["title"]) + " by " + \
              str(data["artists"]) + \
