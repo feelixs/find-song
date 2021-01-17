@@ -175,7 +175,7 @@ def get_song(file, start_sec):
         return j["status"]
 
 
-def parse_response(data):
+def parse_response(data, start_sec):
     if str(data["title"]) != "":
         re = "[" + str(data["title"]) + " by " + \
              str(data["artists"]) + \
@@ -190,16 +190,16 @@ def parse_response(data):
     return re + config.Reddit.footer
 
 
-strt_epoch = time.time()
+start_epoch = time.time()
 
 
 def main():
 
     for c in r.redditor('songsearchbot').comments.new():
-        global strt_epoch
-        if c.created_utc <= strt_epoch:  # don't continue if the comment was from before strt_epoch
+        global start_epoch
+        if c.created_utc <= start_epoch:  # don't continue if the comment was from before start_epoch
             break
-        strt_epoch = c.created_utc
+        start_epoch = c.created_utc
 
         if is_removed(c):
             with open(PMFILE, 'r+') as f:
@@ -238,7 +238,7 @@ def main():
                     data = get_song(MP4FILE, get_sec(start_sec))
                     cf.write(str(msg.id) + ";" + str(data) + ";")
             try:
-                msg.reply(parse_response(data))
+                msg.reply(parse_response(data, start_sec))
                 msg.mark_read()
 
             except:
