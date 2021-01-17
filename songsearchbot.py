@@ -194,7 +194,7 @@ strt_epoch = time.time()
 
 
 def main():
-    
+
     for c in r.redditor('songsearchbot').comments.new():
         global strt_epoch
         if c.created_utc <= strt_epoch:  # don't continue if the comment was from before strt_epoch
