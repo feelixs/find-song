@@ -10,9 +10,13 @@ import config
 import os
 from pytube import YouTube
 from acrcloud.recognizer import ACRCloudRecognizer
+from selenium import webdriver
+
+driver = webdriver.Chrome(config.selenium_driver_path)
 
 r = praw.Reddit(username='songsearchbot', password=config.Reddit.psw, user_agent="songsearchv1", client_id=config.Reddit.client_id, client_secret=config.Reddit.client_secret)
 COMMENTFILE = 'comments.txt'  # comments already replied to
+PMFILE = 'rmPms.txt'  # removed comments whose author have already been pmd
 MP4FILE = 'output.mp4'  # file holding audio pulled from reddit post (replaced with each request)
 ERRORFILE = 'errors.txt'  # log errors to file
 
@@ -68,6 +72,7 @@ def downloadmp4(link, file=MP4FILE):
 
 
 def downloadytmp4(link, file=MP4FILE):
+    """Downloads audio from youtube links"""
     mp4 = YouTube(link)
     try:
         os.remove(MP4FILE)
@@ -84,7 +89,7 @@ def downloadytmp4(link, file=MP4FILE):
 
 
 def acr_create_link(title, artists, acrid):
-    """Parse title, artists, ACR-ID into link to song"""
+    """Parse title, artists, ACR-ID from ACRCloud API requests into song links"""
     url = ""
     spl = str(artists).split(" ")
     for i in range(len(spl)):
@@ -101,7 +106,21 @@ def acr_create_link(title, artists, acrid):
     return url
 
 
+def is_removed(comment):
+    driver.get("https://reddit.com" + str(comment.permalink))
+    time.sleep(2)
+    li = (driver.find_elements_by_link_text('View all comments'))
+    if len(li) == 2:
+        return True
+    else:
+        return False
+# As it's not possible to see if a comment was removed with praw, the bot looks at comments
+# with selenium, and lists the number of times a link with text 'View all comments' appears.
+# If there are two links with the text, it was linked to a removed comment
+
+
 def get_song(file, start_sec):
+    """Requests data from ACRCloud and re-formats for manageability"""
     login = {
         "access_key": config.ACR.key,
         "access_secret": config.ACR.secret,
@@ -156,13 +175,50 @@ def get_song(file, start_sec):
         return j["status"]
 
 
+def parse_reponse(data):
+    if str(data["title"]) != "":
+        re = "[" + str(data["title"]) + " by " + \
+             str(data["artists"]) + \
+             "](https://www.aha-music.com/" + acr_create_link(str(data["title"]),
+                                                              str(data["artists"]), str(data['acrID'])) + ") (" + \
+             str(mstoMin(int(data['play_offset']))) + "/" + str(
+            mstoMin(int(data['duration']))) + ")"
+    else:
+        re = "No song was found"
+    re += "*I started the search at {}, you can provide a timestamp in hour:min:sec to tell me where to search.*".format(start_sec)
+    # append to bottom of response, above footer
+    return re + config.Reddit.footer
+
+
+strt_epoch = time.time()
+
+
 def main():
+    
+    for c in r.redditor('songsearchbot').comments.new():
+        global strt_epoch
+        if c.created_utc <= strt_epoch:  # don't continue if the comment was from before strt_epoch
+            break
+        strt_epoch = c.created_utc
+
+        if is_removed(c):
+            with open(PMFILE, 'r+') as f:
+                txt = f.read()
+                if str(c.id) not in txt:
+                    try:
+                        if c.parent().author is not None:
+                            r.redditor(str(c.parent().author)).message("My reply was removed, here's a PM instead", str(c.body))
+                        f.write(str(c.id) + ";")
+                    except:
+                        with open(ERRORFILE, 'a') as ef:
+                            ef.write(str(datetime.datetime.now()) + ": Error PMing:\n" + str(traceback.format_exc()) + "\n\n")
+
     for msg in r.inbox.unread():
         if "u/songsearchbot" in str(msg.body):
             try:
                 start_sec = get_sec(str(msg.body).split(" ")[1])
             except:
-                start_sec = 0
+                start_sec = '00:00:00'
 
             if 'v.redd.it' in str(msg.submission.url):
                 url = str(msg.submission.url) + "/DASH_audio.mp4"
@@ -173,34 +229,28 @@ def main():
 
             with open(COMMENTFILE, 'r+') as cf:
                 contents = cf.read()
-                if str(msg.id) in contents:  # if it already saw this comment but errored out when trying to reply, get info from file
+                if str(msg.id) in contents:  # have I already seen this comment?
                     spl = contents.split(';')
                     for i in range(len(spl)):
                         if str(spl[i]) == str(msg.id):
-                            data = ast.literal_eval(spl[i+1])
-                else:   # if it never saw the comment before, lookup song
-                    data = get_song(MP4FILE, start_sec)
+                            data = ast.literal_eval(spl[i + 1])  # ast.literal_eval = convert str to dict
+                else:  # nope, I need to look up the audio
+                    data = get_song(MP4FILE, get_sec(start_sec))
                     cf.write(str(msg.id) + ";" + str(data) + ";")
-
-            if str(data["title"]) != "":
-                re = "[" + str(data["title"]) + " by " + str(data["artists"]) + "](https://www.aha-music.com/" + acr_create_link(str(data["title"]), str(data["artists"]), str(data['acrID'])) + ") (" + str(mstoMin(int(data['play_offset']))) + "/" + str(mstoMin(int(data['duration']))) + ")"
-            else:
-                re = "No song was found"
-
             try:
-                msg.reply(re + config.Reddit.footer)
+                msg.reply(parse_response(data))
                 msg.mark_read()
 
             except:
                 with open(ERRORFILE, 'a') as ef:
-                    ef.write(str(datetime.datetime.now()) + ": Error replying:\n" + str(traceback.format_exc())+ "\n\n")
+                    ef.write(str(datetime.datetime.now()) + ": Error replying:\n" + str(traceback.format_exc()) + "\n\n")
 
         else:
             msg.mark_read()
 
 
 if __name__ == '__main__':
-
+    """Run main() once each minute forever"""
     while True:
         try:
             main()
