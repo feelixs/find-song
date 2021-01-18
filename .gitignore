@@ -6,3 +6,4 @@ rmPms.txt
 errors.txt
 *.pyc
 
+debug.log
