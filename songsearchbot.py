@@ -88,23 +88,50 @@ def downloadytmp4(link, file=MP4FILE):
             ef.write(str(datetime.datetime.now()) + ": Error in downloadyt:\n" + str(traceback.format_exc()) + "\n\n")
 
 
+def clear_formatting(string):
+    """Takes brackets, parentheses, stars out of strings"""
+    word = ""
+    for i in range(len(string)):
+        if string[i] != "[" and string[i] != "]" and string[i] != "(" and string[i] != ")" and string[i] != "*":
+            word += string[i]
+    return word
+
+
 def acr_create_link(title, artists, acrid):
-    """Parse title, artists, ACR-ID from ACRCloud API requests into song links"""
+    """Parse title, artists, acrid into link to song"""
     url = ""
-    spl = str(artists).split(" ")
-    for i in range(len(spl)):
+
+    spl = []
+    word = ""
+    for i in range(len(str(artists))): # put each word in the 'artists' into a list, and take out parentheses and brackets
+        if str(artists)[i] != "[" and str(artists)[i] != "]" and str(artists)[i] != "(" and str(artists)[i] != ")" and str(artists)[i] != "*":
+            if str(artists)[i] != " ":
+                word += str(artists)[i]
+            else:
+                spl.append(word)
+                word = ""
+    for i in range(len(spl)):  # put underscores between words
         url += spl[i]
         if i != len(spl):
             url += "_"
     url += "-"
-    spl = str(title).split(" ")
-    for i in range(len(spl)):
+
+    spl = []
+    word = ""
+    for i in range(len(str(title))):  # do the same with 'title'
+        if str(title)[i] != "[" and str(title)[i] != "]" and str(title)[i] != "(" and str(title)[i] != ")":
+            if str(title)[i] != " ":
+                word += str(title)[i]
+            else:
+                spl.append(word)
+                word = ""
+
+    for i in range(len(spl)):  # put underscores between words
         url += spl[i]
         if i != len(spl):
             url += "_"
     url += "-" + acrid
     return url
-
 
 def is_removed(comment):
     driver.get("https://reddit.com" + str(comment.permalink))
@@ -177,12 +204,10 @@ def get_song(file, start_sec):
 
 def parse_response(data, start_sec):
     if str(data["title"]) != "":
-        re = "[" + str(data["title"]) + " by " + \
-             str(data["artists"]) + \
-             "](https://www.aha-music.com/" + acr_create_link(str(data["title"]),
-                                                              str(data["artists"]), str(data['acrID'])) + ") (" + \
-             str(mstoMin(int(data['play_offset']))) + "/" + str(
-            mstoMin(int(data['duration']))) + ")"
+        re = "[" + clear_formatting(str(data["title"])) + " by " + \
+             clear_formatting(str((data["artists"]))) + "](https://www.aha-music.com/" \
+             + acr_create_link(str(data["title"]), str(data["artists"]), str(data['acrID'])) + ") (" + \
+             str(mstoMin(int(data['play_offset']))) + "/" + str(mstoMin(int(data['duration']))) + ")\n\n"
     else:
         re = "No song was found"
     re += "\n\n*I started the search at {}, you can provide a timestamp in hour:min:sec to tell me where to search.*".format(start_sec)
