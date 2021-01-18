@@ -219,13 +219,11 @@ start_epoch = time.time()
 
 
 def main():
-
-    for c in r.redditor('songsearchbot').comments.new():
+    for c in r.redditor('songsearchbot').comments.new():  # have any of my new comments been removed?
         global start_epoch
         if c.created_utc <= start_epoch:  # don't continue if the comment was from before start_epoch
             break
         start_epoch = c.created_utc
-
         if is_removed(c):
             with open(PMFILE, 'r+') as f:
                 txt = f.read()
@@ -238,7 +236,7 @@ def main():
                         with open(ERRORFILE, 'a') as ef:
                             ef.write(str(datetime.datetime.now()) + ": Error PMing:\n" + str(traceback.format_exc()) + "\n\n")
 
-    for msg in r.inbox.unread():
+    for msg in r.inbox.unread():  
         if "u/songsearchbot" in str(msg.body):
             try:
                 start_sec = get_sec(str(msg.body).split(" ")[1])
