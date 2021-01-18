@@ -58,7 +58,7 @@ def sectoMin(ms):
 
 def get_sec(time_str):
     """Get Seconds from time."""
-    h, m, s = time_str.split(':')
+    h, m, s = str(time_str).split(':')
     return int(h) * 3600 + int(m) * 60 + int(s)
 
 
@@ -236,7 +236,7 @@ def main():
                         with open(ERRORFILE, 'a') as ef:
                             ef.write(str(datetime.datetime.now()) + ": Error PMing:\n" + str(traceback.format_exc()) + "\n\n")
 
-    for msg in r.inbox.unread():  
+    for msg in r.inbox.unread():
         if "u/songsearchbot" in str(msg.body):
             try:
                 start_sec = get_sec(str(msg.body).split(" ")[1])
