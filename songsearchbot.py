@@ -5,6 +5,7 @@ import traceback
 import ast
 import json
 import requests
+import urllib.request
 import math
 import config
 import os
@@ -62,7 +63,7 @@ def get_sec(time_str):
     return int(h) * 3600 + int(m) * 60 + int(s)
 
 
-def downloadmp4(link, file=MP4FILE):
+def download_reddit(link, file=MP4FILE):
     """Pulls & downloads audio from reddit post"""
     mp4 = requests.get(link)
     with open(file, 'wb') as f:
@@ -71,7 +72,7 @@ def downloadmp4(link, file=MP4FILE):
                 f.write(chunk)
 
 
-def downloadytmp4(link, file=MP4FILE):
+def download_yt(link, file=MP4FILE):
     """Downloads audio from youtube links"""
     mp4 = YouTube(link)
     try:
@@ -86,6 +87,34 @@ def downloadytmp4(link, file=MP4FILE):
     except:
         with open(ERRORFILE, 'a') as ef:
             ef.write(str(datetime.datetime.now()) + ": Error in downloadyt:\n" + str(traceback.format_exc()) + "\n\n")
+
+
+def download_twitchclip(url, output_path=MP4FILE):
+    """Download twitch clips"""
+    # first, we need a twitch oauth token to access clips
+    aut_params = {'client_id': config.Twitch.client_id, 'client_secret': config.Twitch.client_secret,
+                  'grant_type': 'client_credentials'}
+    data = requests.post(url='https://id.twitch.tv/oauth2/token', params=aut_params).json()
+    i = 0
+    token = "error"
+    while (token == "error") and (i < 5):
+        i += 1
+        try:
+            token = data["access_token"]
+        except:
+            pass
+    if i == 5:
+        return "error"
+
+    # now that we got an oauth for the twitch API, use it in the headers for the clip download request
+    h = {"Client-ID": config.Twitch.client_id, 'client_secret': config.Twitch.client_secret, 'Authorization': "Bearer " + token}
+    slug = str(url).split('/')[-1]
+    clip_info = requests.get("https://api.twitch.tv/helix/clips?id=" + slug, headers=h).json()
+    thumb_url = clip_info['data'][0]['thumbnail_url']
+    mp4_url = thumb_url.split("-preview", 1)[0] + ".mp4"
+
+    urllib.request.urlretrieve(mp4_url, output_path)
+    return "success"
 
 
 def clear_formatting(string):
@@ -205,16 +234,20 @@ def get_song(file, start_sec):
             "ms_until_over": ms_until_over, "acrID": acrID}
 
 
-def parse_response(data, start_sec):
-    if str(data["title"]) != "":
-        re = "[" + clear_formatting(str(data["title"])) + " by " + \
-             clear_formatting(str((data["artists"]))) + "](https://www.aha-music.com/" \
-             + acr_create_link(str(data["title"]), str(data["artists"]), str(data['acrID'])) + ") (" + \
-             str(mstoMin(int(data['play_offset']))) + "/" + str(mstoMin(int(data['duration']))) + ")\n\n"
+def parse_response(data, start_sec=""):
+    if start_sec != "":
+        if str(data["title"]) != "":
+            re = "[" + clear_formatting(str(data["title"])) + " by " + \
+                 clear_formatting(str((data["artists"]))) + "](https://www.aha-music.com/" \
+                 + acr_create_link(str(data["title"]), str(data["artists"]), str(data['acrID'])) + ") (" + \
+                 str(mstoMin(int(data['play_offset']))) + "/" + str(mstoMin(int(data['duration']))) + ")\n\n"
+        else:
+            re = "No song was found"
+
+        re += "\n\n*I started the search at {}, you can provide a timestamp in hour:min:sec to tell me where to search.*".format(start_sec)
+        # append to bottom of response, above footer
     else:
-        re = "No song was found"
-    re += "\n\n*I started the search at {}, you can provide a timestamp in hour:min:sec to tell me where to search.*".format(start_sec)
-    # append to bottom of response, above footer
+        re = data
     return re + config.Reddit.footer
 
 
@@ -247,12 +280,18 @@ def main():
             except:
                 start_sec = '00:00:00'
 
-            if 'v.redd.it' in str(msg.submission.url):
+            supported = 1
+            if 'v.redd.it' in str(msg.submission.url):  # for videos uploaded to reddit
                 url = str(msg.submission.url) + "/DASH_audio.mp4"
-                downloadmp4(url)
-            else:
+                download_reddit(url)
+            elif 'youtu.be' in str(msg.submission.url):  # for youtube links
                 url = str(msg.submission.url)
-                downloadytmp4(url)
+                download_yt(url)
+            elif 'twitch.tv' in str(msg.submission.url):  # for twitch links
+                url = str(msg.submission.url)
+                print(download_twitchclip(url))
+            else:  # for other links (vimeo, etc)
+                supported = 0
 
             with open(COMMENTFILE, 'r+') as cf:
                 contents = cf.read()
@@ -265,7 +304,10 @@ def main():
                     data = get_song(MP4FILE, get_sec(start_sec))
                     cf.write(str(msg.id) + ";" + str(data) + ";")
             try:
-                msg.reply(parse_response(data, start_sec))
+                if supported == 1:
+                    msg.reply(parse_response(data, start_sec))
+                else:
+                    msg.reply(parse_response("I don't currently support this video link type. Please check back later!"))
                 msg.mark_read()
 
             except:
