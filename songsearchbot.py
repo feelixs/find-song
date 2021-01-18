@@ -155,51 +155,54 @@ def get_song(file, start_sec):
     }
 
     acr = ACRCloudRecognizer(login)
-    j = json.loads(acr.recognize_by_file(file, start_sec))
-    try:
-        try:
-            artists = j['metadata']['music'][0]['artists'][0]['name']
-        except:
-            artists = ""
-        try:
-            genres = j["metadata"]["music"][0]["genres"][0]["name"]
-        except:
-            genres = ""
-        try:
-            album = j["metadata"]["music"][0]["album"]["name"]
-        except:
-            album = ""
-        try:
-            title = j["metadata"]["music"][0]["title"]
-        except:
-            title = ""
-        try:
-            releasedate = j["metadata"]["music"][0]["release_date"]
-        except:
-            releasedate = ""
-        try:
-            label = j["metadata"]["music"][0]["label"]
-        except:
-            label = ""
-        try:
-            duration = j["metadata"]["music"][0]["duration_ms"]
-        except:
-            duration = 0
-        try:
-            play_offset = j["metadata"]["music"][0]["play_offset_ms"]
-        except:
-            play_offset = 0
-        try:
-            acrID = j["metadata"]["music"][0]["acrid"]
-        except:
-            acrID = ""
+    data = json.loads(acr.recognize_by_file(file, start_sec))
+    # use acrcloud recognize function on file provided in get_song args, and load the data into a json object
 
-        ms_until_over = int(duration) - int(play_offset)
-        return {"msg": "success", "title": title, "artists": artists, "album": album, "label": label, "genres": genres,
-                "release date": releasedate, "duration": duration, "play_offset": play_offset,
-                "ms_until_over": ms_until_over, "acrID": acrID}
+
+    # for each json value we want, try to get it from the API request's data.
+    # If it throws an exception, an error probably occurred with the
+    # API request, so set the value to nothing
+    try:
+        artists = data['metadata']['music'][0]['artists'][0]['name']
     except:
-        return j["status"]
+        artists = ""
+    try:
+        genres = data["metadata"]["music"][0]["genres"][0]["name"]
+    except:
+        genres = ""
+    try:
+        album = data["metadata"]["music"][0]["album"]["name"]
+    except:
+        album = ""
+    try:
+        title = data["metadata"]["music"][0]["title"]
+    except:
+        title = ""
+    try:
+        releasedate = data["metadata"]["music"][0]["release_date"]
+    except:
+        releasedate = ""
+    try:
+        label = data["metadata"]["music"][0]["label"]
+    except:
+        label = ""
+    try:
+        duration = data["metadata"]["music"][0]["duration_ms"]
+    except:
+        duration = 0
+    try:
+        play_offset = data["metadata"]["music"][0]["play_offset_ms"]
+    except:
+        play_offset = 0
+    try:
+        acrID = data["metadata"]["music"][0]["acrid"]
+    except:
+        acrID = ""
+
+    ms_until_over = int(duration) - int(play_offset)
+    return {"msg": "success", "title": title, "artists": artists, "album": album, "label": label, "genres": genres,
+            "release date": releasedate, "duration": duration, "play_offset": play_offset,
+            "ms_until_over": ms_until_over, "acrID": acrID}
 
 
 def parse_response(data, start_sec):
