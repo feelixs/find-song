@@ -15,7 +15,7 @@ from selenium import webdriver
 
 driver = webdriver.Chrome(config.selenium_driver_path)
 
-r = praw.Reddit(username='songsearchbot', password=config.Reddit.psw, user_agent="songsearchv1", client_id=config.Reddit.client_id, client_secret=config.Reddit.client_secret)
+r = praw.Reddit(username='find-song', password=config.Reddit.psw, user_agent="songsearchv1", client_id=config.Reddit.client_id, client_secret=config.Reddit.client_secret)
 COMMENTFILE = 'comments.txt'  # comments already replied to
 PMFILE = 'rmPms.txt'  # removed comments whose author have already been pmd
 MP4FILE = 'output.mp4'  # file holding audio pulled from reddit post (replaced with each request)
@@ -255,7 +255,7 @@ start_epoch = time.time()
 
 
 def main():
-    for c in r.redditor('songsearchbot').comments.new():  # have any of my new comments been removed?
+    for c in r.redditor('find-song').comments.new():  # have any of my new comments been removed?
         global start_epoch
         if c.created_utc <= start_epoch:  # don't continue if the comment was from before start_epoch
             break
@@ -273,7 +273,7 @@ def main():
                             ef.write(str(datetime.datetime.now()) + ": Error PMing:\n" + str(traceback.format_exc()) + "\n\n")
 
     for msg in r.inbox.unread():
-        if "u/songsearchbot" in str(msg.body):
+        if "u/find-song" in str(msg.body):
 
             try:
                 start_sec = str(msg.body).split(" ")[1]

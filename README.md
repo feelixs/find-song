@@ -1,9 +1,9 @@
-**songsearchbot**
+**find-song**
 
-Find the song that's playing in a Reddit post by mentioning u/songsearchbot in its comments. If there are multiple songs in the video you should tell the bot where to look via a timestamp in hour:min:sec format (5 seconds would be 0:0:05, 5 min 0:5:0, etc). 
+Find the song that's playing in a Reddit post by mentioning u/find-song in its comments. If there are multiple songs in the video you should tell the bot where to look via a timestamp in hour:min:sec format (5 seconds would be 0:0:05, 5 min 0:5:0, etc). 
 
 For example the comment 
->[u/songsearchbot](https://www.reddit.com/user/songsearchbot) 0:0:10
+>[u/find-song](https://www.reddit.com/user/find-song) 0:0:10
 
 would tell the bot to find the song playing 10 seconds into the video.
 
