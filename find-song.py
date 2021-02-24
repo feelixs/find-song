@@ -275,7 +275,7 @@ def autoreply():  # auto-reply to comments in r/all
 
                         else:  # if I couldn't recognize the song, don't reply
                             re = "NORESULTS"
-                        re += "\n\n*I am a bot that helps identify songs playing in video posts.*"
+                        re += "\n\n*I am a bot, and this action was performed automatically.*"
                     else:
                         re = "NORESULTS"  # if video type isn't supported, don't reply
 
