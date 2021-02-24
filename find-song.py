@@ -11,9 +11,7 @@ import config
 import os
 from pytube import YouTube
 from acrcloud.recognizer import ACRCloudRecognizer
-from selenium import webdriver
 
-driver = webdriver.Chrome(config.selenium_driver_path)
 
 r = praw.Reddit(username='find-song', password=config.Reddit.psw, user_agent="songsearchv1", client_id=config.Reddit.client_id, client_secret=config.Reddit.client_secret)
 COMMENTFILE = 'comments.txt'  # comments already replied to
@@ -78,7 +76,7 @@ def download_yt(link, file=MP4FILE):
     try:
         os.remove(MP4FILE)
     except:
-        print('no ' + str(MP4FILE))
+        pass
 
     try:
         mp4.streams.filter(file_extension="mp4")
@@ -162,18 +160,6 @@ def acr_create_link(title, artists, acrid):
     url += "-" + acrid
     return url
 
-def is_removed(comment):
-    driver.get("https://reddit.com" + str(comment.permalink))
-    time.sleep(2)
-    li = (driver.find_elements_by_link_text('View all comments'))
-    if len(li) == 2:
-        return True
-    else:
-        return False
-# As it's not possible to see if a comment was removed as spam with praw, the bot looks at its
-# comments with selenium, and lists the number of times a link with text 'View all comments' appears.
-# If there are two links with the text, it was linked to a removed comment
-
 
 def get_song(file, start_sec):
     """Requests data from ACRCloud and re-formats for manageability"""
@@ -251,79 +237,117 @@ def parse_response(data, start_sec=""):
     return re + config.Reddit.footer
 
 
-start_epoch = time.time()
+def autoreply():  # auto-reply to comments in r/all
+    while True:
+        try:
+            s = r.subreddit('all').comments()
+            for c in s:
+                if "what song is this" in str(c.body).lower() or "what's the song" in str(c.body).lower() or "what's this song" in str(c.body).lower() or "what is this song" in str(c.body).lower():
+                    # positives include "what song is this", "what's the song", "what is this song", etc
+                    supported = 1
+                    if 'v.redd.it' in str(c.submission.url):  # for videos uploaded to reddit
+                        url = str(c.submission.url) + "/DASH_audio.mp4"
+                        download_reddit(url)
+                    elif 'youtu.be' in str(c.submission.url):  # for youtube links
+                        url = str(c.submission.url)
+                        download_yt(url)
+                    elif 'twitch.tv' in str(c.submission.url):  # for twitch links
+                        url = str(c.submission.url)
+                    else:  # for other links
+                        supported = 0
+
+                    with open(COMMENTFILE, 'r+') as cf:
+                        contents = cf.read()
+                        if str(c.id) in contents:  # have I already seen this comment?
+                            spl = contents.split(';')
+                            for i in range(len(spl)):
+                                if str(spl[i]) == str(c.id):
+                                    data = ast.literal_eval(spl[i + 1])  # ast.literal_eval = convert str to dict
+                        else:                      # nope, I need to look up the audio
+                            data = get_song(MP4FILE, get_sec('00:00:00'))
+                            try:
+                                cf.write(str(c.id) + ";" + str(data) + ";" + str(c.author) + ";")
+                            except:
+                                pass
+
+                    if supported == 1:
+                        if str(data["title"]) != "":
+                            re = "[**" + clear_formatting(str(data["title"])) + " by " + clear_formatting(
+                                str(data["artists"])) + "**](https://www.aha-music.com/" + acr_create_link(
+                                str(data["title"]), str(data["artists"]), str(data['acrID'])) + ") (" + str(
+                                mstoMin(int(data['play_offset']))) + "/" + str(mstoMin(int(data['duration']))) + ")\n\n"
+
+                        else:  # if I couldn't recognize the song, don't reply
+                            re = "NORESULTS"
+                        re += "\n\n*I am a bot that helps identify songs playing in video posts.*"
+                    else:
+                        re = "NORESULTS"  # if video type isn't supported, don't reply
+
+                    if "NORESULTS" not in str(re):
+                        try:
+                            c.reply(re + config.Reddit.footer)
+                            with open('replies_submissions.txt', 'a') as f:
+                                f.write(c.submission.permalink)
+                        except:
+                            pass
+        except:
+            print(traceback.format_exc())
 
 
-def main():
-    for c in r.redditor('find-song').comments.new():  # have any of my new comments been removed?
-        global start_epoch
-        if c.created_utc <= start_epoch:  # don't continue if the comment was from before start_epoch
-            break
-        start_epoch = c.created_utc
-        if is_removed(c):
-            with open(PMFILE, 'r+') as f:
-                txt = f.read()
-                if str(c.id) not in txt:
+def mentions():
+    while True:
+        try:
+            for msg in r.inbox.unread():
+                if "u/find-song" in str(msg.body):
                     try:
-                        if c.parent().author is not None:
-                            r.redditor(str(c.parent().author)).message("My reply was removed, here's a PM instead", str(c.body))
-                        f.write(str(c.id) + ";")
+                        start_sec = str(msg.body).split(" ")[1]
+                    except:
+                        start_sec = '00:00:00'
+
+                    supported = 1
+                    if 'v.redd.it' in str(msg.submission.url):  # for videos uploaded to reddit
+                        url = str(msg.submission.url) + "/DASH_audio.mp4"
+                        download_reddit(url)
+                    elif 'youtu.be' in str(msg.submission.url):  # for youtube links
+                        url = str(msg.submission.url)
+                        download_yt(url)
+                    elif 'twitch.tv' in str(msg.submission.url):  # for twitch links
+                        url = str(msg.submission.url)
+                    else:  # for other links (vimeo, etc)
+                        supported = 0
+
+                    with open(COMMENTFILE, 'r+') as cf:
+                        contents = cf.read()
+                        if str(msg.id) in contents:  # have I already seen this comment?
+                            spl = contents.split(';')
+                            for i in range(len(spl)):
+                                if str(spl[i]) == str(msg.id):
+                                    data = ast.literal_eval(spl[i + 1])
+                        else:                        # nope, I need to look up the audio
+                            data = get_song(MP4FILE, get_sec(start_sec))
+                            cf.write(str(msg.id) + ";" + str(data) + ";")
+                    try:
+                        if supported == 1:
+                            msg.reply(parse_response(data, start_sec))
+                        else:
+                            msg.reply(parse_response("I don't currently support this video link type. Please check back later!"))
+                        msg.mark_read()
+
                     except:
                         with open(ERRORFILE, 'a') as ef:
-                            ef.write(str(datetime.datetime.now()) + ": Error PMing:\n" + str(traceback.format_exc()) + "\n\n")
+                            ef.write(str(datetime.datetime.now()) + ": Error replying:\n" + str(traceback.format_exc()) + "\n\n")
 
-    for msg in r.inbox.unread():
-        if "u/find-song" in str(msg.body):
-
-            try:
-                start_sec = str(msg.body).split(" ")[1]
-            except:
-                start_sec = '00:00:00'
-
-            supported = 1
-            if 'v.redd.it' in str(msg.submission.url):  # for videos uploaded to reddit
-                url = str(msg.submission.url) + "/DASH_audio.mp4"
-                download_reddit(url)
-            elif 'youtu.be' in str(msg.submission.url):  # for youtube links
-                url = str(msg.submission.url)
-                download_yt(url)
-            elif 'twitch.tv' in str(msg.submission.url):  # for twitch links
-                url = str(msg.submission.url)
-                print(download_twitchclip(url))
-            else:  # for other links (vimeo, etc)
-                supported = 0
-
-            with open(COMMENTFILE, 'r+') as cf:
-                contents = cf.read()
-                if str(msg.id) in contents:  # have I already seen this comment?
-                    spl = contents.split(';')
-                    for i in range(len(spl)):
-                        if str(spl[i]) == str(msg.id):
-                            data = ast.literal_eval(spl[i + 1])  # ast.literal_eval = convert str to dict
-                else:  # nope, I need to look up the audio
-                    data = get_song(MP4FILE, get_sec(start_sec))
-                    cf.write(str(msg.id) + ";" + str(data) + ";")
-            try:
-                if supported == 1:
-                    msg.reply(parse_response(data, start_sec))
                 else:
-                    msg.reply(parse_response("I don't currently support this video link type. Please check back later!"))
-                msg.mark_read()
+                    msg.mark_read()
+        except:
+            print(traceback.format_exc())
 
-            except:
-                with open(ERRORFILE, 'a') as ef:
-                    ef.write(str(datetime.datetime.now()) + ": Error replying:\n" + str(traceback.format_exc()) + "\n\n")
-
-        else:
-            msg.mark_read()
+        time.sleep(60)
 
 
 if __name__ == '__main__':
-    """Run main() once each minute forever"""
-    while True:
-        try:
-            main()
-        except:
-            with open(ERRORFILE, 'a') as ef:
-                ef.write(str(datetime.datetime.now()) + ": Error in main:\n" + str(traceback.format_exc()) + "\n\n")
-        time.sleep(60)
+    autoreply_process = multiprocessing.Process(autoreply())  # auto-reply multiprocess
+    mentions_process = multiprocessing.Process(mentions())  # mention reply multiprocess
+    autoreply_process.start()
+    mentions_process.start()
+
