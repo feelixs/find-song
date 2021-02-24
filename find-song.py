@@ -18,10 +18,6 @@ r = praw.Reddit(username='find-song', password=config.Reddit.psw, user_agent="so
 COMMENTFILE = 'comments.txt'  # comments already replied to
 PMFILE = 'rmPms.txt'  # removed comments whose author have already been pmd
 MP4FILE = 'output.mp4'  # file holding audio pulled from reddit post (replaced with each request)
-ERRORFILE = 'errors.txt'  # log errors to file
-
-with open(ERRORFILE, 'w') as f:  # clear errorfile on each run
-    f.close()
 
 
 def mstoMin(ms):
@@ -84,8 +80,7 @@ def download_yt(link, file=MP4FILE):
         of = mp4.streams.get_by_itag(18).download()
         os.rename(of, 'output.mp4')
     except:
-        with open(ERRORFILE, 'a') as ef:
-            ef.write(str(datetime.datetime.now()) + ": Error in downloadyt:\n" + str(traceback.format_exc()) + "\n\n")
+        print(traceback.format_exc())
 
 
 def download_twitchclip(url, output_path=MP4FILE):
@@ -335,8 +330,7 @@ def mentions():
                         msg.mark_read()
 
                     except:
-                        with open(ERRORFILE, 'a') as ef:
-                            ef.write(str(datetime.datetime.now()) + ": Error replying:\n" + str(traceback.format_exc()) + "\n\n")
+                       print(traceback.format_exc())
 
                 else:
                     msg.mark_read()
@@ -351,4 +345,3 @@ if __name__ == '__main__':
     mentions_process = multiprocessing.Process(mentions())  # mention reply multiprocess
     autoreply_process.start()
     mentions_process.start()
-
