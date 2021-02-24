@@ -341,7 +341,7 @@ def mentions():
 
 
 if __name__ == '__main__':
-    autoreply_process = multiprocessing.Process(autoreply())  # auto-reply multiprocess
-    mentions_process = multiprocessing.Process(mentions())  # mention reply multiprocess
+    autoreply_process = multiprocessing.Process(target=autoreply)  # auto-reply multiprocess
+    mentions_process = multiprocessing.Process(target=mentions)  # mention reply multiprocess
     autoreply_process.start()
     mentions_process.start()
