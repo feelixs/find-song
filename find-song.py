@@ -252,19 +252,7 @@ def autoreply():  # auto-reply to comments in r/all
                     else:  # for other links
                         supported = 0
 
-                    with open(COMMENTFILE, 'r+') as cf:
-                        contents = cf.read()
-                        if str(c.id) in contents:  # have I already seen this comment?
-                            spl = contents.split(';')
-                            for i in range(len(spl)):
-                                if str(spl[i]) == str(c.id):
-                                    data = ast.literal_eval(spl[i + 1])  # ast.literal_eval = convert str to dict
-                        else:                      # nope, I need to look up the audio
-                            data = get_song(MP4FILE, get_sec('00:00:00'))
-                            try:
-                                cf.write(str(c.id) + ";" + str(data) + ";" + str(c.author) + ";")
-                            except:
-                                pass
+                    data = get_song(MP4FILE, get_sec('00:00:00'))
 
                     if supported == 1:
                         if str(data["title"]) != "":
@@ -282,8 +270,6 @@ def autoreply():  # auto-reply to comments in r/all
                     if "NORESULTS" not in str(re):
                         try:
                             c.reply(re + config.Reddit.footer)
-                            with open('replies_submissions.txt', 'a') as f:
-                                f.write(c.submission.permalink)
                         except:
                             pass
         except:
