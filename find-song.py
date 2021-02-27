@@ -238,7 +238,7 @@ def autoreply():  # auto-reply to comments in r/all
         try:
             s = r.subreddit('all').comments()
             for c in s:
-                if "what song is this" in str(c.body).lower() or "what's the song" in str(c.body).lower() or "what's this song" in str(c.body).lower() or "what is this song" in str(c.body).lower():
+                if "what song is this" in str(c.body).lower() or "what's the song" in str(c.body).lower() or "what's this song" in str(c.body).lower() or "what is this song" in str(c.body).lower() or "what song is playing" in str(c.body).lower():
                     # positives include "what song is this", "what's the song", "what is this song", etc
                     supported = 1
                     if 'v.redd.it' in str(c.submission.url):  # for videos uploaded to reddit
