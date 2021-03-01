@@ -54,6 +54,8 @@ def sectoMin(ms):
 
 def get_sec(time_str):
     """Get Seconds from time."""
+    if len(time_str) < 6:
+        time_str = '00:00:00'
     h, m, s = time_str.split(':')
     return int(h) * 3600 + int(m) * 60 + int(s)
 
