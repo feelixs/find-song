@@ -296,6 +296,7 @@ def mentions():
                         download_yt(url)
                     elif 'twitch.tv' in str(msg.submission.url):  # for twitch links
                         url = str(msg.submission.url)
+                        download_twitchclip(url)
                     else:  # for other links (vimeo, etc)
                         supported = 0
 
