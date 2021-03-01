@@ -240,7 +240,7 @@ def autoreply():  # auto-reply to comments in r/all
         try:
             s = r.subreddit('all').comments()
             for c in s:
-                if "what song is this" in str(c.body).lower() or "what's the song" in str(c.body).lower() or "what's this song" in str(c.body).lower() or "what is this song" in str(c.body).lower():
+                if "what song is this" in str(c.body).lower() or "what's the song" in str(c.body).lower() or "what's this song" in str(c.body).lower() or "what is this song" in str(c.body).lower() or "what song is playing" in str(c.body).lower():
                     # positives include "what song is this", "what's the song", "what is this song", etc
                     supported = 1
                     if 'v.redd.it' in str(c.submission.url):  # for videos uploaded to reddit
@@ -251,6 +251,7 @@ def autoreply():  # auto-reply to comments in r/all
                         download_yt(url)
                     elif 'twitch.tv' in str(c.submission.url):  # for twitch links
                         url = str(c.submission.url)
+                        download_twitchclip(url)
                     else:  # for other links
                         supported = 0
 
@@ -297,6 +298,7 @@ def mentions():
                         download_yt(url)
                     elif 'twitch.tv' in str(msg.submission.url):  # for twitch links
                         url = str(msg.submission.url)
+                        download_twitchclip(url)
                     else:  # for other links (vimeo, etc)
                         supported = 0
 
