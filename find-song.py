@@ -54,7 +54,7 @@ def sectoMin(ms):
 
 def get_sec(time_str):
     """Get Seconds from time."""
-    if len(time_str) < 6:
+    if len(time_str) < 6 or time_str == "u/find-song":
         time_str = '00:00:00'
     h, m, s = time_str.split(':')
     return int(h) * 3600 + int(m) * 60 + int(s)
@@ -304,17 +304,21 @@ def mentions():
 
                     with open(COMMENTFILE, 'r+') as cf:
                         contents = cf.read()
-                        if str(msg.id) in contents:  # have I already seen this comment?
-                            spl = contents.split(';')
-                            for i in range(len(spl)):
-                                if str(spl[i]) == str(msg.id):
-                                    data = ast.literal_eval(spl[i + 1])
-                        else:                        # nope, I need to look up the audio
-                            data = get_song(MP4FILE, get_sec(start_sec))
-                            cf.write(str(msg.id) + ";" + str(data) + ";")
+                    if str(msg.id) in contents:  # have I already seen this comment?
+                        spl = contents.split(';')
+                        for i in range(len(spl)):
+                            if str(spl[i]) == str(msg.id):
+                                data = ast.literal_eval(spl[i + 1])
+                    else:                        # nope, I need to look up the audio
+                        data = get_song(MP4FILE, get_sec(start_sec))
+                        with open(COMMENTFILE, 'ab') as cf:
+                            cf.write((str(msg.id) + ";" + str(data) + ";").encode('utf8'))
                     try:
                         if supported == 1:
-                            msg.reply(parse_response(data, start_sec))
+                            try:
+                                msg.reply(parse_response(data, start_sec))
+                            except:
+                                print(traceback.format_exc())
                         else:
                             msg.reply(parse_response("I don't currently support this video link type. Please check back later!"))
                         msg.mark_read()
