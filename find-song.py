@@ -122,7 +122,7 @@ def clear_formatting(string):
     return word
 
 
-def acr_create_link(title, artists, acrid):
+def acr_create_link(title, artists, acrid):  # converts artist, title, and id strings into link format
     """Parse title, artists, acrid into link to song"""
     url = ""
 
@@ -159,7 +159,7 @@ def acr_create_link(title, artists, acrid):
     return url
 
 
-def get_song(file, start_sec):
+def get_song(file, start_sec):  # uses ACRCloud api to fingerprint audio file (downloaded from Reddit)
     """Requests data from ACRCloud and re-formats for manageability"""
     login = {
         "access_key": config.ACR.key,
@@ -170,7 +170,6 @@ def get_song(file, start_sec):
     acr = ACRCloudRecognizer(login)
     data = json.loads(acr.recognize_by_file(file, start_sec))
     # use acrcloud recognize function on file provided in get_song args, and load the data into a json object
-
 
     # for each json value we want, try to get it from the API request's data.
     # If it throws an exception, an error probably occurred with the
@@ -218,7 +217,7 @@ def get_song(file, start_sec):
             "ms_until_over": ms_until_over, "acrID": acrID}
 
 
-def parse_response(data, start_sec=""):
+def parse_response(data, start_sec=""):  # convert json data from ACRCloud api into response
     if start_sec != "":
         if str(data["title"]) != "":
             re = "[" + clear_formatting(str(data["title"])) + " by " + \
