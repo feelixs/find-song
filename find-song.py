@@ -249,6 +249,7 @@ def autoreply():  # auto-reply to comments in r/all
                         download_yt(url)
                     elif 'twitch.tv' in str(c.submission.url):  # for twitch links
                         url = str(c.submission.url)
+                        download_twitchclip(url)
                     else:  # for other links
                         supported = 0
 
