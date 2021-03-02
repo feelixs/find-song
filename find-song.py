@@ -307,7 +307,7 @@ def mentions():
                         spl = contents.split(';')
                         for i in range(len(spl)):
                             if str(spl[i]) == str(msg.id):
-                                data = ast.literal_eval(spl[i + 1])
+                                data = ast.literal_eval(spl[i + 1])  # ast.literal_eval = str to dict
                     else:                        # nope, I need to look up the audio
                         data = get_song(MP4FILE, get_sec(start_sec))
                         with open(COMMENTFILE, 'ab') as cf:
