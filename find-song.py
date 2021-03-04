@@ -309,7 +309,10 @@ def mentions():
                             if str(spl[i]) == str(msg.id):
                                 data = ast.literal_eval(spl[i + 1])  # ast.literal_eval = str to dict
                     else:                        # nope, I need to look up the audio
-                        data = get_song(MP4FILE, get_sec(start_sec))
+                        try:
+                            data = get_song(MP4FILE, get_sec(start_sec))
+                        except:
+                            data = get_song(MP4FILE, get_sec('00:00:00'))
                         with open(COMMENTFILE, 'ab') as cf:
                             cf.write((str(msg.id) + ";" + str(data) + ";").encode('utf8'))
                     try:
