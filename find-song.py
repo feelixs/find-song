@@ -315,7 +315,8 @@ def mentions():
                         try:
                             data = get_song(MP4FILE, get_sec(start_sec))
                         except:
-                            data = get_song(MP4FILE, get_sec('00:00:00'))
+                            start_sec = '00:00:00'
+                            data = get_song(MP4FILE, get_sec(start_sec))
                         with open(COMMENTFILE, 'ab') as cf:
                             cf.write((str(msg.id) + ";" + str(data) + ";").encode('utf8'))
                     try:
