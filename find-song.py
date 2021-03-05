@@ -20,145 +20,6 @@ PMFILE = 'rmPms.txt'  # removed comments whose author have already been pmd
 MP4FILE = 'output.mp4'  # file holding audio pulled from reddit post (replaced with each request)
 
 
-def mstoMin(ms):
-    """Convert milliseconds to 0:00 format"""
-    d = float(int(ms) / 60000)
-
-    ro = round(float((d - math.floor(d)) * 60))
-    d = math.floor(d)
-    if ro == 60:
-        ro = str("00")
-        d += 1
-    if len(str(ro)) == 1:
-        ro = "0" + str(ro)
-    mn = str(d) + ":" + str(ro)
-
-    return mn
-
-
-def sectoMin(ms):
-    """Convert seconds to 0:00 format"""
-    d = float(int(ms) / 60)
-
-    ro = round(float((d - math.floor(d)) * 60))
-    d = math.floor(d)
-    if ro == 60:
-        ro = str("00")
-        d += 1
-    if len(str(ro)) == 1:
-        ro = "0" + str(ro)
-    mn = str(d) + ":" + str(ro)
-
-    return mn
-
-
-def get_sec(time_str):
-    """Get Seconds from time."""
-    if len(time_str) < 6 or time_str == "u/find-song":
-        time_str = '00:00:00'
-    h, m, s = time_str.split(':')
-    return int(h) * 3600 + int(m) * 60 + int(s)
-
-
-def download_reddit(link, file=MP4FILE):
-    """Pulls & downloads audio from reddit post"""
-    mp4 = requests.get(link)
-    with open(file, 'wb') as f:
-        for chunk in mp4.iter_content(chunk_size=255):
-            if chunk:
-                f.write(chunk)
-
-
-def download_yt(link, file=MP4FILE):
-    """Downloads audio from youtube links"""
-    mp4 = YouTube(link)
-    try:
-        os.remove(MP4FILE)
-    except:
-        pass
-
-    try:
-        mp4.streams.filter(file_extension="mp4")
-        of = mp4.streams.get_by_itag(18).download()
-        os.rename(of, 'output.mp4')
-    except:
-        print(traceback.format_exc())
-
-
-def download_twitchclip(url, output_path=MP4FILE):
-    """Download twitch clips"""
-    # first, we need a twitch oauth token to access clips
-    aut_params = {'client_id': config.Twitch.client_id, 'client_secret': config.Twitch.client_secret,
-                  'grant_type': 'client_credentials'}
-    data = requests.post(url='https://id.twitch.tv/oauth2/token', params=aut_params).json()
-    i = 0
-    token = "error"
-    while (token == "error") and (i < 5):
-        i += 1
-        try:
-            token = data["access_token"]
-        except:
-            pass
-    if i == 5:
-        return "error"
-
-    # now that we got an oauth for the twitch API, use it in the headers for the clip download request
-    h = {"Client-ID": config.Twitch.client_id, 'client_secret': config.Twitch.client_secret, 'Authorization': "Bearer " + token}
-    slug = str(url).split('/')[-1]
-    clip_info = requests.get("https://api.twitch.tv/helix/clips?id=" + slug, headers=h).json()
-    thumb_url = clip_info['data'][0]['thumbnail_url']
-    mp4_url = thumb_url.split("-preview", 1)[0] + ".mp4"
-
-    urllib.request.urlretrieve(mp4_url, output_path)
-    return "success"
-
-
-def clear_formatting(string):
-    """Takes brackets, parentheses, stars out of strings"""
-    word = ""
-    for i in range(len(string)):
-        if string[i] != "[" and string[i] != "]" and string[i] != "(" and string[i] != ")" and string[i] != "*":
-            word += string[i]
-    return word
-
-
-def acr_create_link(title, artists, acrid):  # converts artist, title, and id strings into link format
-    """Parse title, artists, acrid into link to song"""
-    url = ""
-
-    spl = []
-    word = ""
-    for i in range(len(str(artists))): # put each word in the 'artists' into a list, and take out parentheses and brackets
-        if str(artists)[i] != "[" and str(artists)[i] != "]" and str(artists)[i] != "(" and str(artists)[i] != ")" and str(artists)[i] != "*":
-            if str(artists)[i] != " ":
-                word += str(artists)[i]
-            else:
-                spl.append(word)
-                word = ""
-    for i in range(len(spl)):  # put underscores between words
-        url += spl[i]
-        if i != len(spl):
-            url += "_"
-    url += "-"
-
-    spl = []
-    word = ""
-    for i in range(len(str(title))):  # do the same with 'title'
-        if str(title)[i] != "[" and str(title)[i] != "]" and str(title)[i] != "(" and str(title)[i] != ")":
-            if str(title)[i] != " ":
-                word += str(title)[i]
-            else:
-                spl.append(word)
-                word = ""
-
-    for i in range(len(spl)):  # put underscores between words
-        url += spl[i]
-        if i != len(spl):
-            url += "_"
-    url += "-" + acrid
-    return url
-
-
 def get_song(file, start_sec):  # uses ACRCloud api to fingerprint audio file (downloaded from Reddit)
     """Requests data from ACRCloud and re-formats for manageability"""
     login = {
@@ -217,6 +78,145 @@ def get_song(file, start_sec):  # uses ACRCloud api to fingerprint audio file (d
             "ms_until_over": ms_until_over, "acrID": acrID}
 
 
+def download_reddit(link, file=MP4FILE):
+    """Pulls & downloads audio from reddit post"""
+    mp4 = requests.get(link)
+    with open(file, 'wb') as f:
+        for chunk in mp4.iter_content(chunk_size=255):
+            if chunk:
+                f.write(chunk)
+
+
+def download_yt(link, file=MP4FILE):
+    """Downloads audio from youtube links"""
+    mp4 = YouTube(link)
+    try:
+        os.remove(MP4FILE)
+    except:
+        pass
+
+    try:
+        mp4.streams.filter(file_extension="mp4")
+        of = mp4.streams.get_by_itag(18).download()
+        os.rename(of, 'output.mp4')
+    except:
+        print(traceback.format_exc())
+
+
+def download_twitchclip(url, output_path=MP4FILE):
+    """Download twitch clips"""
+    # first, we need a twitch oauth token to access clips
+    aut_params = {'client_id': config.Twitch.client_id, 'client_secret': config.Twitch.client_secret,
+                  'grant_type': 'client_credentials'}
+    data = requests.post(url='https://id.twitch.tv/oauth2/token', params=aut_params).json()
+    i = 0
+    token = "error"
+    while (token == "error") and (i < 5):
+        i += 1
+        try:
+            token = data["access_token"]
+        except:
+            pass
+    if i == 5:
+        return "error"
+
+    # now that we got an oauth for the twitch API, use it in the headers for the clip download request
+    h = {"Client-ID": config.Twitch.client_id, 'client_secret': config.Twitch.client_secret, 'Authorization': "Bearer " + token}
+    slug = str(url).split('/')[-1]
+    clip_info = requests.get("https://api.twitch.tv/helix/clips?id=" + slug, headers=h).json()
+    thumb_url = clip_info['data'][0]['thumbnail_url']
+    mp4_url = thumb_url.split("-preview", 1)[0] + ".mp4"
+
+    urllib.request.urlretrieve(mp4_url, output_path)
+    return "success"
+
+
+def acr_create_link(title, artists, acrid):  # converts artist, title, and id strings into link format
+    """Parse title, artists, acrid into link to song"""
+    url = ""
+
+    spl = []
+    word = ""
+    for i in range(len(str(artists))): # put each word in the 'artists' into a list, and take out parentheses and brackets
+        if str(artists)[i] != "[" and str(artists)[i] != "]" and str(artists)[i] != "(" and str(artists)[i] != ")" and str(artists)[i] != "*":
+            if str(artists)[i] != " ":
+                word += str(artists)[i]
+            else:
+                spl.append(word)
+                word = ""
+    for i in range(len(spl)):  # put underscores between words
+        url += spl[i]
+        if i != len(spl):
+            url += "_"
+    url += "-"
+
+    spl = []
+    word = ""
+    for i in range(len(str(title))):  # do the same with 'title'
+        if str(title)[i] != "[" and str(title)[i] != "]" and str(title)[i] != "(" and str(title)[i] != ")":
+            if str(title)[i] != " ":
+                word += str(title)[i]
+            else:
+                spl.append(word)
+                word = ""
+
+    for i in range(len(spl)):  # put underscores between words
+        url += spl[i]
+        if i != len(spl):
+            url += "_"
+    url += "-" + acrid
+    return url
+
+
+def mstoMin(ms):
+    """Convert milliseconds to 0:00 format"""
+    d = float(int(ms) / 60000)
+
+    ro = round(float((d - math.floor(d)) * 60))
+    d = math.floor(d)
+    if ro == 60:
+        ro = str("00")
+        d += 1
+    if len(str(ro)) == 1:
+        ro = "0" + str(ro)
+    mn = str(d) + ":" + str(ro)
+
+    return mn
+
+
+def sectoMin(ms):
+    """Convert seconds to 0:00 format"""
+    d = float(int(ms) / 60)
+
+    ro = round(float((d - math.floor(d)) * 60))
+    d = math.floor(d)
+    if ro == 60:
+        ro = str("00")
+        d += 1
+    if len(str(ro)) == 1:
+        ro = "0" + str(ro)
+    mn = str(d) + ":" + str(ro)
+
+    return mn
+
+
+def get_sec(time_str):
+    """Get Seconds from time."""
+    if len(time_str) < 6 or time_str == "u/find-song":
+        time_str = '00:00:00'
+    h, m, s = time_str.split(':')
+    return int(h) * 3600 + int(m) * 60 + int(s)
+
+
+def clear_formatting(string):
+    """Takes brackets, parentheses, stars out of strings"""
+    word = ""
+    for i in range(len(string)):
+        if string[i] != "[" and string[i] != "]" and string[i] != "(" and string[i] != ")" and string[i] != "*":
+            word += string[i]
+    return word
+
+
 def parse_response(data, start_sec=""):  # convert json data from ACRCloud api into response
     if start_sec != "":
         if str(data["title"]) != "":
@@ -232,6 +232,9 @@ def parse_response(data, start_sec=""):  # convert json data from ACRCloud api i
     else:
         re = data
     return re + config.Reddit.footer
+
+
+# PROCESSES
 
 
 def autoreply():  # auto-reply to comments in r/all
