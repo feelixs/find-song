@@ -233,7 +233,6 @@ def parse_response(data, start_sec=""):  # convert json data from ACRCloud api i
         re = data
     return re + config.Reddit.footer
 
-
 # PROCESSES
 
 
