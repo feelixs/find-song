@@ -16,7 +16,3 @@ The API is fairly accurate even when background noise is present, but it will no
 
 If a mention doesn't have a timestamp, find-song will start at the beginning of the video.
 
-***
-**Donations**
-
-If you find this project helpful, please consider supporting it through a [donation](https://ko-fi.com/songsearch).
