@@ -280,6 +280,8 @@ def autoreply():  # auto-reply to comments in r/all
         except:
             print(traceback.format_exc())
 
+            time.sleep(1)
+
 
 def mentions():
     while True:
@@ -334,6 +336,7 @@ def mentions():
 
                 else:
                     msg.mark_read()
+
         except:
             print(traceback.format_exc())
 
