@@ -267,7 +267,7 @@ def autoreply():  # auto-reply to comments in r/all
 
                         else:  # if I couldn't recognize the song, don't reply
                             re = "NORESULTS"
-                        re += "\n\n*I am a bot, and this action was performed automatically.*"
+                        re += "\n\n*I am a bot, and this action was performed automatically. I started the search at 00:00:00, you can mention me with a timestamp in h:m:s to search somewhere else.*"
                     else:
                         re = "NORESULTS"  # if video type isn't supported, don't reply
 
@@ -327,7 +327,10 @@ def mentions():
                             except:
                                 print(traceback.format_exc())
                         else:
-                            msg.reply(parse_response("I don't currently support this video link type. Please check back later!"))
+                            try:
+                                msg.reply(parse_response("I don't currently support this video link type. Please check back later!"))
+                            except:
+                                pass
                         msg.mark_read()
 
                     except:
