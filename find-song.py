@@ -247,7 +247,7 @@ def autoreply():  # auto-reply to comments in r/all
                     if 'v.redd.it' in str(c.submission.url):  # for videos uploaded to reddit
                         url = str(c.submission.url) + "/DASH_audio.mp4"
                         download_reddit(url)
-                    elif 'youtu.be' in str(c.submission.url):  # for youtube links
+                    elif 'youtu.be' in str(c.submission.url) or 'm.youtube' in str(c.submission.url):  # for youtube links
                         url = str(c.submission.url)
                         download_yt(url)
                     elif 'twitch.tv' in str(c.submission.url):  # for twitch links
@@ -293,10 +293,11 @@ def mentions():
                         start_sec = '00:00:00'
 
                     supported = 1
+
                     if 'v.redd.it' in str(msg.submission.url):  # for videos uploaded to reddit
                         url = str(msg.submission.url) + "/DASH_audio.mp4"
                         download_reddit(url)
-                    elif 'youtu.be' in str(msg.submission.url):  # for youtube links
+                    elif 'youtu.be' in str(msg.submission.url) or 'm.youtube' in str(msg.submission.url):  # for youtube links
                         url = str(msg.submission.url)
                         download_yt(url)
                     elif 'twitch.tv' in str(msg.submission.url):  # for twitch links
@@ -304,6 +305,7 @@ def mentions():
                         download_twitchclip(url)
                     else:  # for other links (vimeo, etc)
                         supported = 0
+
 
                     with open(COMMENTFILE, 'r+') as cf:
                         contents = cf.read()
@@ -337,6 +339,24 @@ def mentions():
                        print(traceback.format_exc())
 
                 else:
+                    # for replies to bot's comments
+                    try:
+                        start_sec = get_sec(msg.body)  # if the reply is in h:m:s format it continues, otherwise it raises an error
+                        if 'v.redd.it' in str(msg.submission.url):  # for videos uploaded to reddit
+                            url = str(msg.submission.url) + "/DASH_audio.mp4"
+                            download_reddit(url)
+                        elif 'youtu.be' in str(msg.submission.url) or 'm.youtube' in str(msg.submission.url):  # for youtube links
+                            url = str(msg.submission.url)
+                            download_yt(url)
+                        elif 'twitch.tv' in str(msg.submission.url):  # for twitch links
+                            url = str(msg.submission.url)
+                            download_twitchclip(url)
+                        data = get_song(MP4FILE, start_sec)
+                        re = parse_response(data, str(msg.body))
+                        msg.reply(re)
+                    except:
+                        pass
+
                     msg.mark_read()
 
         except:
