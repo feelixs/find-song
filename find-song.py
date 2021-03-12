@@ -217,20 +217,102 @@ def clear_formatting(string):
     return word
 
 
-def parse_response(data, start_sec=""):  # convert json data from ACRCloud api into response
-    if start_sec != "":
-        if str(data["title"]) != "":
-            re = "[" + clear_formatting(str(data["title"])) + " by " + \
-                 clear_formatting(str((data["artists"]))) + "](https://www.aha-music.com/" \
-                 + acr_create_link(str(data["title"]), str(data["artists"]), str(data['acrID'])) + ") (" + \
-                 str(mstoMin(int(data['play_offset']))) + "/" + str(mstoMin(int(data['duration']))) + ")\n\n"
-        else:
-            re = "No song was found"
+def get_youtube_link_time(url):
+    """Get the seconds from youtube link's &t=hms format. Returns seconds and str formatted in h:m:s"""
+    hours = ""
+    minuts = ""
+    secs = ""
+    surl = str(url)
+    if "t=" in surl or "time_continue=" in surl or "start=" in surl:
+        at = 0
+        i = len(surl)
+        letter = ""
 
-        re += "\n\n*I started the search at {}, you can provide a timestamp in hour:min:sec to tell me where to search.*".format(start_sec)
-        # append to bottom of response, above footer
+        while i > 0 and letter != "=":
+            i -= 1
+            letter = surl[i]
+            if at == 's':
+                try:
+                    checkint = int(letter)
+                    secs = surl[i] + secs
+                except:
+                    pass
+            elif at == 'm':
+                try:
+                    checkint = int(letter)
+                    minuts = surl[i] + minuts
+                except:
+                    pass
+            elif at == 'h':
+                try:
+                    checkint = int(letter)
+                    hours = surl[i] + hours
+                except:
+                    pass
+            if i == len(surl) - 2:  # if loop's at the second letter from the end of the url
+                try:
+                    checkint = int(letter)  # see if it's an int
+                    at = 's'
+                    secs = letter
+                except:
+                    pass
+            if letter == 's':
+                at = 's'
+            elif letter == 'm':
+                at = 'm'
+            elif letter == 'h':
+                at = 'h'
+    if hours == "":
+        hours = 0
     else:
-        re = data
+        hours = int(hours)
+    if minuts == "":
+        minuts = 0
+    else:
+        minuts = int(minuts)
+    if secs == "":
+        secs = 0
+    else:
+        secs = int(secs)
+    if len(str(secs)) == 1:
+        time_str = str(hours) + ":" + str(minuts) + ":0" + str(secs)
+    elif len(str(minuts)) == 1:
+        time_str = str(hours) + ":0" + str(minuts) + ":" + str(secs)
+    elif len(str(secs)) == 1 and len(str(minuts)) == 1:
+        time_str = str(hours) + ":0" + str(minuts) + ":0" + str(secs)
+    else:
+        time_str = str(hours) + ":" + str(minuts) + ":" + str(secs)
+    total_secs = hours * 3600 + minuts * 60 + secs
+    return total_secs, time_str
+
+
+def parse_response(data, start_sec="", content=""):  # convert json data from ACRCloud api into response
+    if content == "youtube":
+        if data == "error":
+            re = "There's something wrong with your link."
+        else:
+            if str(data["title"]) != "":
+                re = "[" + clear_formatting(str(data["title"])) + " by " + \
+                     clear_formatting(str((data["artists"]))) + "](https://www.aha-music.com/" \
+                     + acr_create_link(str(data["title"]), str(data["artists"]), str(data['acrID'])) + ") (" + \
+                     str(mstoMin(int(data['play_offset']))) + "/" + str(mstoMin(int(data['duration']))) + ")\n\n"
+            else:
+                re = "No song was found"
+            re += "\n\nLooks like you gave me a youtube video to watch.\nI started this search at {}.".format(start_sec)
+    else:
+        if start_sec == "":
+            re = data
+        else:
+            if str(data["title"]) != "":
+                re = "[" + clear_formatting(str(data["title"])) + " by " + \
+                     clear_formatting(str((data["artists"]))) + "](https://www.aha-music.com/" \
+                     + acr_create_link(str(data["title"]), str(data["artists"]), str(data['acrID'])) + ") (" + \
+                     str(mstoMin(int(data['play_offset']))) + "/" + str(mstoMin(int(data['duration']))) + ")\n\n"
+            else:
+                re = "No song was found"
+            re += "\n\n*I started the search at {}, you can provide a timestamp in hour:min:sec to tell me where to search.*".format(
+                start_sec)
+
     return re + config.Reddit.footer
 
 # PROCESSES
@@ -287,56 +369,86 @@ def mentions():
         try:
             for msg in r.inbox.unread():
                 if "u/find-song" in str(msg.body):
-                    try:
-                        start_sec = str(msg.body).split(" ")[1]
-                    except:
-                        start_sec = '00:00:00'
-
-                    supported = 1
-
-                    if 'v.redd.it' in str(msg.submission.url):  # for videos uploaded to reddit
-                        url = str(msg.submission.url) + "/DASH_audio.mp4"
-                        download_reddit(url)
-                    elif 'youtu.be' in str(msg.submission.url) or 'm.youtube' in str(msg.submission.url):  # for youtube links
-                        url = str(msg.submission.url)
-                        download_yt(url)
-                    elif 'twitch.tv' in str(msg.submission.url):  # for twitch links
-                        url = str(msg.submission.url)
-                        download_twitchclip(url)
-                    else:  # for other links (vimeo, etc)
-                        supported = 0
-
-
-                    with open(COMMENTFILE, 'r+') as cf:
-                        contents = cf.read()
-                    if str(msg.id) in contents:  # have I already seen this comment?
-                        spl = contents.split(';')
-                        for i in range(len(spl)):
-                            if str(spl[i]) == str(msg.id):
-                                data = ast.literal_eval(spl[i + 1])  # ast.literal_eval = str to dict
-                    else:                        # nope, I need to look up the audio
+                    if 'youtu.be' in str(msg.body) or 'youtube' in str(msg.body):  # if a comment has u/find-song and a youtube link
+                        splt = str(msg.body).split(" ")
+                        start_sec = 0
+                        url = "na"
+                        time_str = "00:00:00"
                         try:
-                            data = get_song(MP4FILE, get_sec(start_sec))
+                            for s in splt:
+                                if 'youtu.be' in s or 'youtube' in s:
+                                    url = s
+                            download_yt(url)
+                            start_sec, time_str = get_youtube_link_time(url)
+                            if start_sec == 0:
+                                for s in splt:
+                                    if ":" in s:
+                                        try:
+                                            start_sec = get_sec(s)
+                                            time_str = s
+                                        except:
+                                            pass
+                            data = get_song(MP4FILE, start_sec)
+                            re = parse_response(data, time_str, 'youtube')
+
                         except:
-                            start_sec = '00:00:00'
-                            data = get_song(MP4FILE, get_sec(start_sec))
-                        with open(COMMENTFILE, 'ab') as cf:
-                            cf.write((str(msg.id) + ";" + str(data) + ";").encode('utf8'))
-                    try:
-                        if supported == 1:
-                            try:
-                                msg.reply(parse_response(data, start_sec))
-                            except:
-                                print(traceback.format_exc())
-                        else:
-                            try:
-                                msg.reply(parse_response("I don't currently support this video link type. Please check back later!"))
-                            except:
-                                pass
+                            print(traceback.format_exc())
+                            msg.mark_read()
+                            re = parse_response('error', time_str, 'youtube')
+
+                        msg.reply(re)
                         msg.mark_read()
 
-                    except:
-                       print(traceback.format_exc())
+                    else:
+                        try:
+                            start_sec = str(msg.body).split(" ")[1]
+                        except:
+                            start_sec = '00:00:00'
+
+                        supported = 1
+
+                        if 'v.redd.it' in str(msg.submission.url):  # for videos uploaded to reddit
+                            url = str(msg.submission.url) + "/DASH_audio.mp4"
+                            download_reddit(url)
+                        elif 'youtu.be' in str(msg.submission.url) or 'm.youtube' in str(msg.submission.url):  # for youtube links
+                            url = str(msg.submission.url)
+                            download_yt(url)
+                        elif 'twitch.tv' in str(msg.submission.url):  # for twitch links
+                            url = str(msg.submission.url)
+                            download_twitchclip(url)
+                        else:  # for other links (vimeo, etc)
+                            supported = 0
+
+                        with open(COMMENTFILE, 'r+') as cf:
+                            contents = cf.read()
+                        if str(msg.id) in contents:  # have I already seen this comment?
+                            spl = contents.split(';')
+                            for i in range(len(spl)):
+                                if str(spl[i]) == str(msg.id):
+                                    data = ast.literal_eval(spl[i + 1])  # ast.literal_eval = str to dict
+                        else:                        # nope, I need to look up the audio
+                            try:
+                                data = get_song(MP4FILE, get_sec(start_sec))
+                            except:
+                                start_sec = '00:00:00'
+                                data = get_song(MP4FILE, get_sec(start_sec))
+                            with open(COMMENTFILE, 'ab') as cf:
+                                cf.write((str(msg.id) + ";" + str(data) + ";").encode('utf8'))
+                        try:
+                            if supported == 1:
+                                try:
+                                    msg.reply(parse_response(data, start_sec))
+                                except:
+                                    print(traceback.format_exc())
+                            else:
+                                try:
+                                    msg.reply(parse_response("I don't currently support this video link type. Please check back later!"))
+                                except:
+                                    pass
+                            msg.mark_read()
+
+                        except:
+                           print(traceback.format_exc())
 
                 else:
                     # for replies to bot's comments
