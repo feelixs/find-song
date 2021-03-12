@@ -16,3 +16,10 @@ The API is fairly accurate even when background noise is present, but it will no
 
 If a mention doesn't have a timestamp, find-song will start at the beginning of the video.
 
+******
+
+If you want to know what song is playing in a YouTube video, you can comment 
+>u/find-song <youtube link> 
+
+and the bot will reply to you. Most youtube timestamp quicklinks will work (&t=, &start=, &time_continue=, etc)
+
