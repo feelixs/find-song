@@ -87,18 +87,18 @@ def download_reddit(link, file=MP4FILE):
                 f.write(chunk)
 
 
-def download_yt(link, file=MP4FILE):
+def download_yt(link, file_name=MP4FILE):
     """Downloads audio from youtube links"""
     mp4 = YouTube(link)
     try:
-        os.remove(MP4FILE)
+        os.remove(file_name)
     except:
         pass
 
     try:
         mp4.streams.filter(file_extension="mp4")
         of = mp4.streams.get_by_itag(18).download()
-        os.rename(of, 'output.mp4')
+        os.rename(of, file_name)
     except:
         print(traceback.format_exc())
 
