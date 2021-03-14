@@ -227,7 +227,6 @@ def get_youtube_link_time(url):
         at = 0
         i = len(surl)
         letter = ""
-
         while i > 0 and letter != "=":
             i -= 1
             letter = surl[i]
@@ -249,9 +248,9 @@ def get_youtube_link_time(url):
                     hours = surl[i] + hours
                 except:
                     pass
-            if i == len(surl) - 2:  # if loop's at the second letter from the end of the url
+            if i == len(surl) - 1:  # the second letter from the end == an int, meaning there isnt an 's'
                 try:
-                    checkint = int(letter)  # see if it's an int
+                    checkint = int(letter)
                     at = 's'
                     secs = letter
                 except:
@@ -274,15 +273,8 @@ def get_youtube_link_time(url):
         secs = 0
     else:
         secs = int(secs)
-    if len(str(secs)) == 1:
-        time_str = str(hours) + ":" + str(minuts) + ":0" + str(secs)
-    elif len(str(minuts)) == 1:
-        time_str = str(hours) + ":0" + str(minuts) + ":" + str(secs)
-    elif len(str(secs)) == 1 and len(str(minuts)) == 1:
-        time_str = str(hours) + ":0" + str(minuts) + ":0" + str(secs)
-    else:
-        time_str = str(hours) + ":" + str(minuts) + ":" + str(secs)
     total_secs = hours * 3600 + minuts * 60 + secs
+    time_str = sectoMin(total_secs)
     return total_secs, time_str
 
 
