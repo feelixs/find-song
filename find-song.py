@@ -8,306 +8,12 @@ import requests
 import urllib.request
 import math
 import config
-import os
+import bot
 import multiprocessing
 from pytube import YouTube
 from acrcloud.recognizer import ACRCloudRecognizer
 
-
-r = praw.Reddit(username='find-song', password=config.Reddit.psw, user_agent="songsearchv1", client_id=config.Reddit.client_id, client_secret=config.Reddit.client_secret)
-COMMENTFILE = 'comments.txt'  # comments already replied to
-PMFILE = 'rmPms.txt'  # removed comments whose author have already been pmd
-MP4FILE = 'output.mp4'  # file holding audio pulled from reddit post (replaced with each request)
-
-
-def get_song(file, start_sec):  # uses ACRCloud api to fingerprint audio file (downloaded from Reddit)
-    """Requests data from ACRCloud and re-formats for manageability"""
-    login = {
-        "access_key": config.ACR.key,
-        "access_secret": config.ACR.secret,
-        "host": "identify-us-west-2.acrcloud.com"
-    }
-
-    acr = ACRCloudRecognizer(login)
-    data = json.loads(acr.recognize_by_file(file, start_sec))
-    # use acrcloud recognize function on file provided in get_song args, and load the data into a json object
-
-    # for each json value we want, try to get it from the API request's data.
-    # If it throws an exception, an error probably occurred with the
-    # API request, so set the value to nothing
-    try:
-        artists = data['metadata']['music'][0]['artists'][0]['name']
-    except:
-        artists = ""
-    try:
-        genres = data["metadata"]["music"][0]["genres"][0]["name"]
-    except:
-        genres = ""
-    try:
-        album = data["metadata"]["music"][0]["album"]["name"]
-    except:
-        album = ""
-    try:
-        title = data["metadata"]["music"][0]["title"]
-    except:
-        title = ""
-    try:
-        releasedate = data["metadata"]["music"][0]["release_date"]
-    except:
-        releasedate = ""
-    try:
-        label = data["metadata"]["music"][0]["label"]
-    except:
-        label = ""
-    try:
-        duration = data["metadata"]["music"][0]["duration_ms"]
-    except:
-        duration = 0
-    try:
-        play_offset = data["metadata"]["music"][0]["play_offset_ms"]
-    except:
-        play_offset = 0
-    try:
-        acrID = data["metadata"]["music"][0]["acrid"]
-    except:
-        acrID = ""
-
-    ms_until_over = int(duration) - int(play_offset)
-    return {"msg": "success", "title": title, "artists": artists, "album": album, "label": label, "genres": genres,
-            "release date": releasedate, "duration": duration, "play_offset": play_offset,
-            "ms_until_over": ms_until_over, "acrID": acrID}
-
-
-def download_reddit(link, file=MP4FILE):
-    """Pulls & downloads audio from reddit post"""
-    mp4 = requests.get(link)
-    with open(file, 'wb') as f:
-        for chunk in mp4.iter_content(chunk_size=255):
-            if chunk:
-                f.write(chunk)
-
-
-def download_yt(link, file_name=MP4FILE):
-    """Downloads audio from youtube links"""
-    mp4 = YouTube(link)
-    try:
-        os.remove(file_name)
-    except:
-        pass
-
-    try:
-        mp4.streams.filter(file_extension="mp4")
-        of = mp4.streams.get_by_itag(18).download()
-        os.rename(of, file_name)
-    except:
-        print(traceback.format_exc())
-
-
-def download_twitchclip(url, output_path=MP4FILE):
-    """Download twitch clips"""
-    # first, we need a twitch oauth token to access clips
-    aut_params = {'client_id': config.Twitch.client_id, 'client_secret': config.Twitch.client_secret,
-                  'grant_type': 'client_credentials'}
-    data = requests.post(url='https://id.twitch.tv/oauth2/token', params=aut_params).json()
-    i = 0
-    token = "error"
-    while (token == "error") and (i < 5):
-        i += 1
-        try:
-            token = data["access_token"]
-        except:
-            pass
-    if i == 5:
-        return "error"
-
-    # now that we got an oauth for the twitch API, use it in the headers for the clip download request
-    h = {"Client-ID": config.Twitch.client_id, 'client_secret': config.Twitch.client_secret, 'Authorization': "Bearer " + token}
-    slug = str(url).split('/')[-1]
-    clip_info = requests.get("https://api.twitch.tv/helix/clips?id=" + slug, headers=h).json()
-    thumb_url = clip_info['data'][0]['thumbnail_url']
-    mp4_url = thumb_url.split("-preview", 1)[0] + ".mp4"
-
-    urllib.request.urlretrieve(mp4_url, output_path)
-    return "success"
-
-
-def acr_create_link(title, artists, acrid):  # converts artist, title, and id strings into link format
-    """Parse title, artists, acrid into link to song"""
-    url = ""
-
-    spl = []
-    word = ""
-    for i in range(len(str(artists))): # put each word in the 'artists' into a list, and take out parentheses and brackets
-        if str(artists)[i] != "[" and str(artists)[i] != "]" and str(artists)[i] != "(" and str(artists)[i] != ")" and str(artists)[i] != "*":
-            if str(artists)[i] != " ":
-                word += str(artists)[i]
-            else:
-                spl.append(word)
-                word = ""
-    for i in range(len(spl)):  # put underscores between words
-        url += spl[i]
-        if i != len(spl):
-            url += "_"
-    url += "-"
-
-    spl = []
-    word = ""
-    for i in range(len(str(title))):  # do the same with 'title'
-        if str(title)[i] != "[" and str(title)[i] != "]" and str(title)[i] != "(" and str(title)[i] != ")":
-            if str(title)[i] != " ":
-                word += str(title)[i]
-            else:
-                spl.append(word)
-                word = ""
-
-    for i in range(len(spl)):  # put underscores between words
-        url += spl[i]
-        if i != len(spl):
-            url += "_"
-    url += "-" + acrid
-    return url
-
-
-def mstoMin(ms):
-    """Convert milliseconds to 0:00 format"""
-    d = float(int(ms) / 60000)
-
-    ro = round(float((d - math.floor(d)) * 60))
-    d = math.floor(d)
-    if ro == 60:
-        ro = str("00")
-        d += 1
-    if len(str(ro)) == 1:
-        ro = "0" + str(ro)
-    mn = str(d) + ":" + str(ro)
-
-    return mn
-
-
-def sectoMin(ms):
-    """Convert seconds to 0:00 format"""
-    d = float(int(ms) / 60)
-
-    ro = round(float((d - math.floor(d)) * 60))
-    d = math.floor(d)
-    if ro == 60:
-        ro = str("00")
-        d += 1
-    if len(str(ro)) == 1:
-        ro = "0" + str(ro)
-    mn = str(d) + ":" + str(ro)
-
-    return mn
-
-
-def get_sec(time_str):
-    """Get Seconds from time."""
-    if len(time_str) < 6 or time_str == "u/find-song":
-        time_str = '00:00:00'
-    h, m, s = time_str.split(':')
-    return int(h) * 3600 + int(m) * 60 + int(s)
-
-
-def clear_formatting(string):
-    """Takes brackets, parentheses, stars out of strings"""
-    word = ""
-    for i in range(len(string)):
-        if string[i] != "[" and string[i] != "]" and string[i] != "(" and string[i] != ")" and string[i] != "*":
-            word += string[i]
-    return word
-
-
-def get_youtube_link_time(url):
-    """Get the seconds from youtube link's &t=hms format. Returns seconds and str formatted in h:m:s"""
-    hours = ""
-    minuts = ""
-    secs = ""
-    surl = str(url)
-    if "t=" in surl or "time_continue=" in surl or "start=" in surl:
-        at = 0
-        i = len(surl)
-        letter = ""
-        while i > 0 and letter != "=":
-            i -= 1
-            letter = surl[i]
-            if at == 's':
-                try:
-                    checkint = int(letter)
-                    secs = surl[i] + secs
-                except:
-                    pass
-            elif at == 'm':
-                try:
-                    checkint = int(letter)
-                    minuts = surl[i] + minuts
-                except:
-                    pass
-            elif at == 'h':
-                try:
-                    checkint = int(letter)
-                    hours = surl[i] + hours
-                except:
-                    pass
-            if i == len(surl) - 1:  # the second letter from the end == an int, meaning there isnt an 's'
-                try:
-                    checkint = int(letter)
-                    at = 's'
-                    secs = letter
-                except:
-                    pass
-            if letter == 's':
-                at = 's'
-            elif letter == 'm':
-                at = 'm'
-            elif letter == 'h':
-                at = 'h'
-    if hours == "":
-        hours = 0
-    else:
-        hours = int(hours)
-    if minuts == "":
-        minuts = 0
-    else:
-        minuts = int(minuts)
-    if secs == "":
-        secs = 0
-    else:
-        secs = int(secs)
-    total_secs = hours * 3600 + minuts * 60 + secs
-    time_str = sectoMin(total_secs)
-    return total_secs, time_str
-
-
-def parse_response(data, start_sec="", content=""):  # convert json data from ACRCloud api into response
-    if content == "youtube":
-        if data == "error":
-            re = "There's something wrong with your link."
-        else:
-            if str(data["title"]) != "":
-                re = "[" + clear_formatting(str(data["title"])) + " by " + \
-                     clear_formatting(str((data["artists"]))) + "](https://www.aha-music.com/" \
-                     + acr_create_link(str(data["title"]), str(data["artists"]), str(data['acrID'])) + ") (" + \
-                     str(mstoMin(int(data['play_offset']))) + "/" + str(mstoMin(int(data['duration']))) + ")\n\n"
-            else:
-                re = "No song was found"
-            re += "\n\nLooks like you gave me a youtube video to watch.\nI started this search at {}.".format(start_sec)
-    else:
-        if start_sec == "":
-            re = data
-        else:
-            if str(data["title"]) != "":
-                re = "[" + clear_formatting(str(data["title"])) + " by " + \
-                     clear_formatting(str((data["artists"]))) + "](https://www.aha-music.com/" \
-                     + acr_create_link(str(data["title"]), str(data["artists"]), str(data['acrID'])) + ") (" + \
-                     str(mstoMin(int(data['play_offset']))) + "/" + str(mstoMin(int(data['duration']))) + ")\n\n"
-            else:
-                re = "No song was found"
-            re += "\n\n*I started the search at {}, you can provide a timestamp in hour:min:sec to tell me where to search.*".format(
-                start_sec)
-
-    return re + config.Reddit.footer
-
-# PROCESSES
+r = bot.authenticate()
 
 
 def autoreply():  # auto-reply to comments in r/all
@@ -316,43 +22,25 @@ def autoreply():  # auto-reply to comments in r/all
             s = r.subreddit('all').comments()
             for c in s:
                 if "what song is this" in str(c.body).lower() or "what's the song" in str(c.body).lower() or "what's this song" in str(c.body).lower() or "what is this song" in str(c.body).lower() or "what song is playing" in str(c.body).lower():
-                    # positives include "what song is this", "what's the song", "what is this song", etc
-                    supported = 1
-                    if 'v.redd.it' in str(c.submission.url):  # for videos uploaded to reddit
-                        url = str(c.submission.url) + "/DASH_audio.mp4"
-                        download_reddit(url)
-                    elif 'youtu.be' in str(c.submission.url) or 'm.youtube' in str(c.submission.url):  # for youtube links
-                        url = str(c.submission.url)
-                        download_yt(url)
-                    elif 'twitch.tv' in str(c.submission.url):  # for twitch links
-                        url = str(c.submission.url)
-                        download_twitchclip(url)
-                    else:  # for other links
-                        supported = 0
-
-                    data = get_song(MP4FILE, get_sec('00:00:00'))
-
+                    supported = bot.download_video(c.submission.url)
                     if supported == 1:
-                        if str(data["title"]) != "":
-                            re = "[**" + clear_formatting(str(data["title"])) + " by " + clear_formatting(
-                                str(data["artists"])) + "**](https://www.aha-music.com/" + acr_create_link(
+                        data = bot.recognize_audio(bot.output_file)
+                        confidence = int(data['score'])
+                        if str(data["msg"]) == "success" and confidence >= 50:
+                            re = "[**" + bot.clear_formatting(str(data["title"])) + " by " + bot.clear_formatting(
+                                str(data["artists"])) + "**](https://www.aha-music.com/" + bot.acr_create_link(
                                 str(data["title"]), str(data["artists"]), str(data['acrID'])) + ") (" + str(
-                                mstoMin(int(data['play_offset']))) + "/" + str(mstoMin(int(data['duration']))) + ")\n\n"
+                                bot.mstoMin(int(data['play_offset']))) + "/" + str(bot.mstoMin(int(data['duration']))) + ")\n\n" \
+                                "*I'm " + str(confidence) + "% sure this is correct. I started the search at 00:00:00, " \
+                                "you can mention me with a timestamp in h:m:s to search somewhere else.*"
 
-                        else:  # if I couldn't recognize the song, don't reply
-                            re = "NORESULTS"
-                        re += "\n\n*I am a bot, and this action was performed automatically. I started the search at 00:00:00, you can mention me with a timestamp in h:m:s to search somewhere else.*"
+                        else:  # if couldn't recognize or confidence < 50, don't reply
+                            break
                     else:
-                        re = "NORESULTS"  # if video type isn't supported, don't reply
-
-                    if "NORESULTS" not in str(re):
-                        try:
-                            c.reply(re + config.Reddit.footer)
-                        except:
-                            pass
+                        break  # if video type isn't supported, don't reply
+                    c.reply(re + config.Reddit.footer)
         except:
             print(traceback.format_exc())
-
             time.sleep(1)
 
 
@@ -360,113 +48,62 @@ def mentions():
     while True:
         try:
             for msg in r.inbox.unread():
-                if "u/find-song" in str(msg.body):
-                    if 'youtu.be' in str(msg.body) or 'youtube' in str(msg.body):  # if a comment has u/find-song and a youtube link
-                        splt = str(msg.body).split(" ")
-                        start_sec = 0
-                        url = "na"
-                        time_str = "00:00:00"
-                        try:
-                            for s in splt:
-                                if 'youtu.be' in s or 'youtube' in s:
-                                    url = s
-                            download_yt(url)
-                            start_sec, time_str = get_youtube_link_time(url)
-                            if start_sec == 0:
-                                for s in splt:
-                                    if ":" in s:
-                                        try:
-                                            start_sec = get_sec(s)
-                                            time_str = s
-                                        except:
-                                            pass
-                            data = get_song(MP4FILE, start_sec)
-                            re = parse_response(data, time_str, 'youtube')
-
-                        except:
-                            print(traceback.format_exc())
-                            msg.mark_read()
-                            re = parse_response('error', time_str, 'youtube')
-
-                        msg.reply(re)
-                        msg.mark_read()
-
-                    else:
-                        try:
-                            start_sec = str(msg.body).split(" ")[1]
-                        except:
-                            start_sec = '00:00:00'
-
-                        supported = 1
-
-                        if 'v.redd.it' in str(msg.submission.url):  # for videos uploaded to reddit
-                            url = str(msg.submission.url) + "/DASH_audio.mp4"
-                            download_reddit(url)
-                        elif 'youtu.be' in str(msg.submission.url) or 'm.youtube' in str(msg.submission.url):  # for youtube links
-                            url = str(msg.submission.url)
-                            download_yt(url)
-                        elif 'twitch.tv' in str(msg.submission.url):  # for twitch links
-                            url = str(msg.submission.url)
-                            download_twitchclip(url)
-                        else:  # for other links (vimeo, etc)
-                            supported = 0
-
-                        with open(COMMENTFILE, 'r+') as cf:
-                            contents = cf.read()
-                        if str(msg.id) in contents:  # have I already seen this comment?
-                            spl = contents.split(';')
-                            for i in range(len(spl)):
-                                if str(spl[i]) == str(msg.id):
-                                    data = ast.literal_eval(spl[i + 1])  # ast.literal_eval = str to dict
-                        else:                        # nope, I need to look up the audio
-                            try:
-                                data = get_song(MP4FILE, get_sec(start_sec))
-                            except:
-                                start_sec = '00:00:00'
-                                data = get_song(MP4FILE, get_sec(start_sec))
-                            with open(COMMENTFILE, 'ab') as cf:
-                                cf.write((str(msg.id) + ";" + str(data) + ";").encode('utf8'))
-                        try:
-                            if supported == 1:
+                msg.mark_read()
+                txt = str(msg.body)
+                words = txt.split(" ")
+                start_sec = 0
+                if "youtu.be" in txt or "youtube" in txt:
+                    url = ""
+                    time_str = "00:00:00"
+                    try:
+                        for word in words:
+                            if "youtu.be" in word or "youtube" in word:
+                                url = word
+                                bot.download_yt(url)
+                                start_sec, time_str = bot.get_youtube_link_time(url)
+                            elif url != "" and start_sec == 0 and ":" in word:
                                 try:
-                                    msg.reply(parse_response(data, start_sec))
-                                except:
-                                    print(traceback.format_exc())
-                            else:
-                                try:
-                                    msg.reply(parse_response("I don't currently support this video link type. Please check back later!"))
+                                    start_sec = bot.timestamp_to_sec(word)
+                                    time_str = word
                                 except:
                                     pass
-                            msg.mark_read()
-
-                        except:
-                           print(traceback.format_exc())
-
-                else:
-                    # for replies to bot's comments
-                    try:
-                        start_sec = get_sec(msg.body)  # if the reply is in h:m:s format it continues, otherwise it raises an error
-                        if 'v.redd.it' in str(msg.submission.url):  # for videos uploaded to reddit
-                            url = str(msg.submission.url) + "/DASH_audio.mp4"
-                            download_reddit(url)
-                        elif 'youtu.be' in str(msg.submission.url) or 'm.youtube' in str(msg.submission.url):  # for youtube links
-                            url = str(msg.submission.url)
-                            download_yt(url)
-                        elif 'twitch.tv' in str(msg.submission.url):  # for twitch links
-                            url = str(msg.submission.url)
-                            download_twitchclip(url)
-                        data = get_song(MP4FILE, start_sec)
-                        re = parse_response(data, str(msg.body))
-                        msg.reply(re)
+                        data = bot.recognize_audio(bot.output_file, start_sec)
+                        re = bot.parse_response(data, time_str, 'youtube')
                     except:
-                        pass
+                        re = bot.parse_response('error', time_str, 'youtube')
+                    msg.reply(re)
 
-                    msg.mark_read()
+                elif "u/find-song" in txt:
+                    for word in words:
+                        try:
+                            start_sec = bot.timestamp_to_sec(word)
+                            break
+                        except:
+                            pass
+                    supported = bot.download_video(msg.submission.url)
+                    if supported == 1:
+                        start_sec = "0:0:0"
+                        data = bot.recognize_audio(bot.output_file, bot.timestamp_to_sec(start_sec))
+                        msg.reply(bot.parse_response(data, start_sec))
+                    else:
+                        msg.reply(bot.parse_response("I don't currently support this video link type. Please check back later!"))
+
+                elif ":" in txt:  # if a reply is just a timestamp
+                    for word in words:
+                        try:
+                            start_sec = bot.timestamp_to_sec(word)
+                            break
+                        except:
+                            pass
+                    supported = bot.download_video(msg.submission.url)
+                    if supported == 1:
+                        data = bot.recognize_audio(bot.output_file, start_sec)
+                        re = bot.parse_response(data, start_sec)
+                        msg.reply(re)
 
         except:
             print(traceback.format_exc())
-
-        time.sleep(60)
+        time.sleep(1)
 
 
 if __name__ == '__main__':
