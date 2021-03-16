@@ -21,6 +21,7 @@ def recognize_audio(file, start_sec=0):
     }
     acr = ACRCloudRecognizer(login)
     data = json.loads(acr.recognize_by_file(file, start_sec))
+    print(data)
 
     # use acrcloud recognize function on file provided in get_song args, and load the data into a json object
 
@@ -69,7 +70,12 @@ def recognize_audio(file, start_sec=0):
         acrID = ""
 
     ms_until_over = int(duration) - int(play_offset)
-
+    try:
+        for m in data['metadata']['music']:
+            print(m)
+    except:
+        print(traceback.format_exc)
+    print("\n")
     if title != "":
         return {"msg": "success", "score": score, "title": title, "artists": artists, "album": album, "label": label, "genres": genres,
                 "release date": releasedate, "duration": duration, "play_offset": play_offset,
@@ -97,32 +103,26 @@ def download_video(video_url):
 
 def mstoMin(ms):
     """Convert milliseconds to 0:00 format"""
-    import math
-    d = float(int(ms) / 60000)
-    ro = round(float((d - math.floor(d)) * 60))
-    d = math.floor(d)
-    if ro == 60:
-        ro = str("00")
-        d += 1
-    if len(str(ro)) == 1:
-        ro = "0" + str(ro)
-    mn = str(d) + ":" + str(ro)
-    return mn
+    import time
+    return time.strftime("%M:%S", time.gmtime(ms / 6000))
 
 
-def sectoMin(ms):
+def mstoHour(ms):
+    """Convert milliseconds to 0:00 format"""
+    import time
+    return time.strftime("%H:%M:%S", time.gmtime(ms / 6000))
+
+
+def sectoMin(secs):
     """Convert seconds to 0:00 format"""
-    import math
-    d = float(int(ms) / 60)
-    ro = round(float((d - math.floor(d)) * 60))
-    d = math.floor(d)
-    if ro == 60:
-        ro = str("00")
-        d += 1
-    if len(str(ro)) == 1:
-        ro = "0" + str(ro)
-    mn = str(d) + ":" + str(ro)
-    return mn
+    import time
+    return time.strftime("%M:%S", time.gmtime(secs))
+
+
+def sectoHour(secs):
+    """Convert seconds to 00:00:00 format"""
+    import time
+    return time.strftime("%H:%M:%S", time.gmtime(secs))
 
 
 def timestamp_to_sec(time_str):
@@ -284,11 +284,11 @@ def get_youtube_link_time(url):
 def parse_response(data, start_sec="", content=""):
     if start_sec == 0:
         start_sec = "00:00:00"
-    confidence = str(data['score'])
     if content == "youtube":
         if data == "error":
             re = "Looks like there's something wrong with the link you gave me."
         else:
+            confidence = str(data['score'])
             if str(data["msg"]) == "success":
                 if int(confidence) == 100:
                     re = "[" + clear_formatting(str(data["title"])) + " by " + \
@@ -310,8 +310,9 @@ def parse_response(data, start_sec="", content=""):
                                     + confidence + "%)\n\n"
             else:
                 re = "No song was found"
-            re += "\n\n*Looks like you gave me a youtube video to watch. I started this search at {}*".format(start_sec)
+            re += "\n\n*Looks like you gave me a youtube video to watch. I searched starting from " + start_sec + "*"
     else:
+        confidence = str(data['score'])
         if str(data["msg"]) == "success":
             if int(confidence) == 100:
                 re = "[" + clear_formatting(str(data["title"])) + " by " + \
