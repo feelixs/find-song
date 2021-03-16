@@ -286,7 +286,7 @@ def parse_response(data, start_sec="", content=""):
         start_sec = "00:00:00"
     if content == "youtube":
         if data == "error":
-            re = "Looks like there's something wrong with the link you gave me."
+            re = "Looks like there's something wrong with the link you gave me, got error **" + start_sec + "**"
         else:
             confidence = str(data['score'])
             if str(data["msg"]) == "success":
