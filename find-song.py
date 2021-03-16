@@ -32,7 +32,7 @@ def autoreply():  # auto-reply to comments in r/all
                             continue
                     else:
                         continue  # if video type isn't supported, don't reply
-                    c.reply(re + config.Reddit.footer)
+                    c.reply(re)
         except:
             print(traceback.format_exc())
             time.sleep(1)
