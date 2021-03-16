@@ -104,13 +104,13 @@ def download_video(video_url):
 def mstoMin(ms):
     """Convert milliseconds to 0:00 format"""
     import time
-    return time.strftime("%M:%S", time.gmtime(ms / 6000))
+    return time.strftime("%M:%S", time.gmtime(ms / 1000))
 
 
 def mstoHour(ms):
     """Convert milliseconds to 0:00 format"""
     import time
-    return time.strftime("%H:%M:%S", time.gmtime(ms / 6000))
+    return time.strftime("%H:%M:%S", time.gmtime(ms / 1000))
 
 
 def sectoMin(secs):
