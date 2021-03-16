@@ -282,6 +282,8 @@ def get_youtube_link_time(url):
 
 
 def parse_response(data, start_sec="", content=""):
+    if start_sec == 0:
+        start_sec = "00:00:00"
     confidence = str(data['score'])
     if content == "youtube":
         if data == "error":
@@ -292,39 +294,43 @@ def parse_response(data, start_sec="", content=""):
                     re = "[" + clear_formatting(str(data["title"])) + " by " + \
                          clear_formatting(str((data["artists"]))) + "](https://www.aha-music.com/" \
                          + acr_create_link(str(data["title"]), str(data["artists"]), str(data['acrID'])) + ") (" + \
-                         str(mstoMin(int(data['play_offset']))) + "/" + str(mstoMin(int(data['duration']))) + ")\n\n"
+                         str(mstoMin(int(data['play_offset']))) + "/" + str(mstoMin(int(data['duration']))) + ", confidence " \
+                                    + confidence + "%)\n\n"
                 elif int(confidence) > 70:
-                    re = "I think it's:\n[" + clear_formatting(str(data["title"])) + " by " + \
+                    re = "I think it's:\n\n[" + clear_formatting(str(data["title"])) + " by " + \
                          clear_formatting(str((data["artists"]))) + "](https://www.aha-music.com/" \
                          + acr_create_link(str(data["title"]), str(data["artists"]), str(data['acrID'])) + ") (" + \
-                         str(mstoMin(int(data['play_offset']))) + "/" + str(mstoMin(int(data['duration']))) + ")\n\n"
+                         str(mstoMin(int(data['play_offset']))) + "/" + str(mstoMin(int(data['duration']))) + ", confidence " \
+                                    + confidence + "%)\n\n"
                 else:
-                    re = "I'm not sure, but this might be it:\n[" + clear_formatting(str(data["title"])) + " by " + \
+                    re = "I'm not sure, but this might be it:\n\n[" + clear_formatting(str(data["title"])) + " by " + \
                          clear_formatting(str((data["artists"]))) + "](https://www.aha-music.com/" \
                          + acr_create_link(str(data["title"]), str(data["artists"]), str(data['acrID'])) + ") (" + \
-                         str(mstoMin(int(data['play_offset']))) + "/" + str(mstoMin(int(data['duration']))) + ")\n\n"
+                         str(mstoMin(int(data['play_offset']))) + "/" + str(mstoMin(int(data['duration']))) + ", confidence " \
+                                    + confidence + "%)\n\n"
             else:
                 re = "No song was found"
-            re += "\n\n*Looks like you gave me a youtube video to watch.\nI started this search at {}*".format(start_sec)
-    elif start_sec == "":
-        re = data
+            re += "\n\n*Looks like you gave me a youtube video to watch. I started this search at {}*".format(start_sec)
     else:
         if str(data["msg"]) == "success":
             if int(confidence) == 100:
                 re = "[" + clear_formatting(str(data["title"])) + " by " + \
                      clear_formatting(str((data["artists"]))) + "](https://www.aha-music.com/" \
                      + acr_create_link(str(data["title"]), str(data["artists"]), str(data['acrID'])) + ") (" + \
-                     str(mstoMin(int(data['play_offset']))) + "/" + str(mstoMin(int(data['duration']))) + ")\n\n"
+                     str(mstoMin(int(data['play_offset']))) + "/" + str(mstoMin(int(data['duration']))) + ", confidence " \
+                                    + confidence + "%)\n\n"
             elif int(confidence) > 70:
-                re = "I think it's:\n[" + clear_formatting(str(data["title"])) + " by " + \
+                re = "I think it's:\n\n[" + clear_formatting(str(data["title"])) + " by " + \
                      clear_formatting(str((data["artists"]))) + "](https://www.aha-music.com/" \
                      + acr_create_link(str(data["title"]), str(data["artists"]), str(data['acrID'])) + ") (" + \
-                     str(mstoMin(int(data['play_offset']))) + "/" + str(mstoMin(int(data['duration']))) + ")\n\n"
+                     str(mstoMin(int(data['play_offset']))) + "/" + str(mstoMin(int(data['duration']))) + ", confidence " \
+                                    + confidence + "%)\n\n"
             else:
-                re = "I'm not sure, but this might be it:\n[" + clear_formatting(str(data["title"])) + " by " + \
+                re = "I'm not sure, but this might be it:\n\n[" + clear_formatting(str(data["title"])) + " by " + \
                      clear_formatting(str((data["artists"]))) + "](https://www.aha-music.com/" \
                      + acr_create_link(str(data["title"]), str(data["artists"]), str(data['acrID'])) + ") (" + \
-                     str(mstoMin(int(data['play_offset']))) + "/" + str(mstoMin(int(data['duration']))) + ")\n\n"
+                     str(mstoMin(int(data['play_offset']))) + "/" + str(mstoMin(int(data['duration']))) + ", confidence " \
+                                    + confidence + "%)\n\n"
         else:
             re = "No song was found"
         re += "\n\n*I started the search at {}, ".format(start_sec) + "you can provide a timestamp in hour:min:sec to tell me where to search.*"
