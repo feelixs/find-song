@@ -63,8 +63,9 @@ def mentions():
                                     pass
                         data = bot.recognize_audio(bot.output_file, start_sec)
                         re = bot.parse_response(data, time_str, 'youtube')
-                    except:
-                        re = bot.parse_response('error', time_str, 'youtube')
+                    except Exception as e:
+                        print(traceback.format_exc())
+                        re = bot.parse_response('error', type(e).__name__, 'youtube')
                     msg.reply(re)
 
                 elif "u/find-song" in txt:
