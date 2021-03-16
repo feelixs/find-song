@@ -277,7 +277,10 @@ def get_youtube_link_time(url):
     else:
         secs = int(secs)
     total_secs = hours * 3600 + minuts * 60 + secs
-    time_str = sectoMin(total_secs)
+    if total_secs >= 3600:
+        time_str = sectoHour(total_secs)
+    else:
+        time_str = sectoMin(total_secs)
     return total_secs, time_str
 
 
@@ -294,8 +297,7 @@ def parse_response(data, start_sec="", content=""):
                     re = "[" + clear_formatting(str(data["title"])) + " by " + \
                          clear_formatting(str((data["artists"]))) + "](https://www.aha-music.com/" \
                          + acr_create_link(str(data["title"]), str(data["artists"]), str(data['acrID'])) + ") (" + \
-                         str(mstoMin(int(data['play_offset']))) + "/" + str(mstoMin(int(data['duration']))) + ", confidence " \
-                                    + confidence + "%)\n\n"
+                         str(mstoMin(int(data['play_offset']))) + "/" + str(mstoMin(int(data['duration']))) + ")\n\n"
                 elif int(confidence) > 70:
                     re = "I think it's:\n\n[" + clear_formatting(str(data["title"])) + " by " + \
                          clear_formatting(str((data["artists"]))) + "](https://www.aha-music.com/" \
@@ -310,7 +312,7 @@ def parse_response(data, start_sec="", content=""):
                                     + confidence + "%)\n\n"
             else:
                 re = "No song was found"
-            re += "\n\n*Looks like you gave me a youtube video to watch. I searched starting from " + start_sec + "*"
+            re += "\n\n*Looks like you gave me a youtube video to watch. I started the search at " + start_sec + "*"
     else:
         confidence = str(data['score'])
         if str(data["msg"]) == "success":
@@ -318,8 +320,7 @@ def parse_response(data, start_sec="", content=""):
                 re = "[" + clear_formatting(str(data["title"])) + " by " + \
                      clear_formatting(str((data["artists"]))) + "](https://www.aha-music.com/" \
                      + acr_create_link(str(data["title"]), str(data["artists"]), str(data['acrID'])) + ") (" + \
-                     str(mstoMin(int(data['play_offset']))) + "/" + str(mstoMin(int(data['duration']))) + ", confidence " \
-                                    + confidence + "%)\n\n"
+                     str(mstoMin(int(data['play_offset']))) + "/" + str(mstoMin(int(data['duration']))) + ")\n\n"
             elif int(confidence) > 70:
                 re = "I think it's:\n\n[" + clear_formatting(str(data["title"])) + " by " + \
                      clear_formatting(str((data["artists"]))) + "](https://www.aha-music.com/" \
