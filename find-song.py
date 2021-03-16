@@ -27,17 +27,11 @@ def autoreply():  # auto-reply to comments in r/all
                         data = bot.recognize_audio(bot.output_file)
                         confidence = int(data['score'])
                         if str(data["msg"]) == "success" and confidence >= 50:
-                            re = "[**" + bot.clear_formatting(str(data["title"])) + " by " + bot.clear_formatting(
-                                str(data["artists"])) + "**](https://www.aha-music.com/" + bot.acr_create_link(
-                                str(data["title"]), str(data["artists"]), str(data['acrID'])) + ") (" + str(
-                                bot.mstoMin(int(data['play_offset']))) + "/" + str(bot.mstoMin(int(data['duration']))) + ")\n\n" \
-                                "*I'm " + str(confidence) + "% sure this is correct. I started the search at 00:00:00, " \
-                                "you can mention me with a timestamp in h:m:s to search somewhere else.*"
-
+                            re = bot.parse_response(data, 0)
                         else:  # if couldn't recognize or confidence < 50, don't reply
-                            break
+                            continue
                     else:
-                        break  # if video type isn't supported, don't reply
+                        continue  # if video type isn't supported, don't reply
                     c.reply(re + config.Reddit.footer)
         except:
             print(traceback.format_exc())
