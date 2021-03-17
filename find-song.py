@@ -58,7 +58,7 @@ def mentions():
                             elif url != "" and start_sec == 0 and ":" in word:
                                 try:
                                     start_sec = bot.timestamp_to_sec(word)
-                                    time_str = word
+                                    time_str = bot.sectoMin(start_sec)
                                 except:
                                     pass
                         data = bot.recognize_audio(bot.output_file, start_sec)
@@ -77,9 +77,8 @@ def mentions():
                             pass
                     supported = bot.download_video(msg.submission.url)
                     if supported == 1:
-                        start_sec = "0:0:0"
-                        data = bot.recognize_audio(bot.output_file, bot.timestamp_to_sec(start_sec))
-                        msg.reply(bot.parse_response(data, start_sec))
+                        data = bot.recognize_audio(bot.output_file, start_sec)
+                        msg.reply(bot.parse_response(data, bot.sectoMin(start_sec)))
                     else:
                         msg.reply(bot.parse_response("I don't currently support this video link type. Please check back later!"))
 
@@ -93,7 +92,7 @@ def mentions():
                     supported = bot.download_video(msg.submission.url)
                     if supported == 1:
                         data = bot.recognize_audio(bot.output_file, start_sec)
-                        re = bot.parse_response(data, start_sec)
+                        re = bot.parse_response(data, bot.sectoMin(start_sec))
                         msg.reply(re)
 
         except:
