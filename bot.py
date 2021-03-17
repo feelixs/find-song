@@ -309,7 +309,7 @@ def parse_response(data, start_sec="", content=""):
             if str(data["msg"]) == "success":
                 s_index = "none"
                 for i in range(len(stored_songs)):  # see if I have the spotify link for the song stored
-                    if str(stored_songs[i]) == str(data["title"]):
+                    if str(stored_songs[i]) == str(data["title"]) and str(stored_artists[i]) == str(data['artists']):
                         s_index = i
                         break
                 print(stored_songs, data["title"], "index =", s_index)
@@ -357,7 +357,7 @@ def parse_response(data, start_sec="", content=""):
         if str(data["msg"]) == "success":
             s_index = "none"
             for i in range(len(stored_songs)):  # see if I have the spotify link for the song stored
-                if str(stored_songs[i]) == str(data["title"]):
+                if str(stored_songs[i]) == str(data["title"]) and str(stored_artists[i]) == str(data['artists']):
                     s_index = i
                     break
             print(stored_songs, data["title"], "index =", s_index)
