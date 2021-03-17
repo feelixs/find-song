@@ -20,7 +20,7 @@ def recognize_audio(file, start_sec=0):
         "host": "identify-us-west-2.acrcloud.com"
     }
     acr = ACRCloudRecognizer(login)
-    data = json.loads(acr.recognize_by_file(file, start_sec))
+    data = json.loads(acr.recognize_by_file(file, start_sec, 30))  # try to recognize to the song using 30 seconds of the file's audio
     print(data)
 
     # use acrcloud recognize function on file provided in get_song args, and load the data into a json object
@@ -316,7 +316,9 @@ def parse_response(data, start_sec="", content=""):
                 if s_index != "none":  # if I have the spotify link stored
                     if int(confidence) == 100:
                         re = "[" + clear_formatting(str(data["title"])) + " by " + \
-                             clear_formatting(str((data["artists"]))) + "](" + str(stored_urls[s_index]) + ")\n\n"
+                             clear_formatting(str((data["artists"]))) + "](" + str(stored_urls[s_index]) + ") (" + \
+                         str(mstoMin(int(data['play_offset']))) + "/" + str(
+                        mstoMin(int(data['duration']))) + ")\n\n"
                     elif int(confidence) > 70:
                         re = "I think it's:\n\n[" + clear_formatting(str(data["title"])) + " by " + \
                              clear_formatting(str((data["artists"]))) + "](" + str(stored_urls[s_index]) + ") (" + \
@@ -399,8 +401,11 @@ def parse_response(data, start_sec="", content=""):
             re = "No song was found"
         re += "\n\n*I started the search at {}, ".format(start_sec) + "you can provide a timestamp in hour:min:sec to tell me where to search.*"
     if "No song was found" not in re:
-        with open('stats.txt', 'ab') as fb:
-            fb.write(str(str(data["title"]) + ";;" + str(data["artists"]) + "\n").encode('utf8'))
+        try:
+            with open('stats.txt', 'ab') as fb:
+                fb.write(str(str(data["title"]) + ";;" + str(data["artists"]) + "\n").encode('utf8'))
+        except:
+            print(traceback.format_exc())
     return re + config.Reddit.footer
 
 
