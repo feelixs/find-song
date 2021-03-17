@@ -104,31 +104,35 @@ def download_video(video_url):
 def mstoMin(ms):
     """Convert milliseconds to 0:00 format"""
     import time
-    return time.strftime("%M:%S", time.gmtime(ms / 1000))
-
-
-def mstoHour(ms):
-    """Convert milliseconds to 0:00 format"""
-    import time
-    return time.strftime("%H:%M:%S", time.gmtime(ms / 1000))
+    if ms >= 3600000:
+        return time.strftime("%H:%M:%S", time.gmtime(ms / 1000))
+    else:
+        return time.strftime("%M:%S", time.gmtime(ms / 1000))
 
 
 def sectoMin(secs):
     """Convert seconds to 0:00 format"""
     import time
-    return time.strftime("%M:%S", time.gmtime(secs))
-
-
-def sectoHour(secs):
-    """Convert seconds to 00:00:00 format"""
-    import time
-    return time.strftime("%H:%M:%S", time.gmtime(secs))
+    if secs >= 3600:
+        return time.strftime("%H:%M:%S", time.gmtime(secs))
+    else:
+        return time.strftime("%M:%S", time.gmtime(secs))
 
 
 def timestamp_to_sec(time_str):
     """Get Seconds from time."""
     time_str = str(time_str)
-    h, m, s = time_str.split(':')
+    list = time_str.split(':')
+    if len(list) == 3:
+        h, m, s = list
+    elif len(list) == 2:
+        m, s = list
+        h = 0
+    elif len(list) == 1:
+        s = list[0]
+        h, m = 0, 0
+    else:
+        h, m, s = 0, 0, 0
     return int(h) * 3600 + int(m) * 60 + int(s)
 
 
@@ -150,6 +154,7 @@ def download_yt(link, file_name=output_file):
     try:
         os.remove(file_name)
     except:
+        print(traceback.format_exc())
         pass
     try:
         mp4.streams.filter(file_extension="mp4")
@@ -336,7 +341,9 @@ def parse_response(data, start_sec="", content=""):
         else:
             re = "No song was found"
         re += "\n\n*I started the search at {}, ".format(start_sec) + "you can provide a timestamp in hour:min:sec to tell me where to search.*"
-
+    if "No song was found" not in re:
+        with open('stats.txt', 'ab') as fb:
+            fb.write(str(str(data["title"]) + ";;" + str(data["artists"]) + "\n").encode('utf8'))
     return re + config.Reddit.footer
 
 
