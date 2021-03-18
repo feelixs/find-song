@@ -74,7 +74,7 @@ def recognize_audio(file, start_sec=0):
         for m in data['metadata']['music']:
             print(m)
     except:
-        print(traceback.format_exc)
+        print(traceback.format_exc())
     print("\n")
     if title != "":
         return {"msg": "success", "score": score, "title": title, "artists": artists, "album": album, "label": label, "genres": genres,
