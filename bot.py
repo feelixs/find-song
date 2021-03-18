@@ -309,10 +309,10 @@ def parse_response(data, start_sec="", content=""):
             if str(data["msg"]) == "success":
                 s_index = "none"
                 for i in range(len(stored_songs)):  # see if I have the spotify link for the song stored
-                    if str(stored_songs[i]) == str(data["title"]) and str(stored_artists[i]) == str(data['artists']):
+                    if str(stored_songs[i]).lower() == str(data["title"]).lower() and str(stored_artists[i]).lower() == str(data['artists']).lower():
                         s_index = i
                         break
-                print(stored_songs, data["title"], "index =", s_index)
+                print(stored_songs, "\n", data["title"], "\n", stored_artists, "\n", data['artists'], "\nindex =", s_index)
                 if s_index != "none":  # if I have the spotify link stored
                     if int(confidence) == 100:
                         re = "[" + clear_formatting(str(data["title"])) + " by " + \
@@ -357,10 +357,10 @@ def parse_response(data, start_sec="", content=""):
         if str(data["msg"]) == "success":
             s_index = "none"
             for i in range(len(stored_songs)):  # see if I have the spotify link for the song stored
-                if str(stored_songs[i]) == str(data["title"]) and str(stored_artists[i]) == str(data['artists']):
+                if str(stored_songs[i]).lower() == str(data["title"]).lower() and str(stored_artists[i]).lower() == str(data['artists']).lower():
                     s_index = i
                     break
-            print(stored_songs, data["title"], "index =", s_index)
+            print(stored_songs, "\n", data["title"], "\n", stored_artists, "\n", data['artists'], "\nindex =", s_index)
             if s_index != "none":  # if I have the spotify link stored
                 if int(confidence) == 100:
                     re = "[" + clear_formatting(str(data["title"])) + " by " + \
