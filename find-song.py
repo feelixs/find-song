@@ -1,6 +1,6 @@
 import time
 import traceback
-import bot
+import bot, config
 import multiprocessing
 
 r = bot.authenticate()
@@ -115,7 +115,7 @@ def mentions():
                             data = bot.recognize_audio(bot.output_file, start_sec)
                             ctx_reply(msg, bot.parse_response(data, bot.sectoMin(start_sec)))
                         else:
-                            ctx_reply(msg, "I don't currently support this video link type. Please check back later!", False)
+                            ctx_reply(msg, "I couldn't find the audio.\n\nMake sure it's a v.reddit, youtube, or twitch link, and try again" + config.Reddit.footer, False)
 
                 elif ":" in txt:  # if a reply is just a timestamp
                     for word in words:
