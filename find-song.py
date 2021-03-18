@@ -1,19 +1,19 @@
-import praw
 import time
-import datetime
 import traceback
-import ast
-import json
-import requests
-import urllib.request
-import math
-import config
 import bot
 import multiprocessing
-from pytube import YouTube
-from acrcloud.recognizer import ACRCloudRecognizer
 
 r = bot.authenticate()
+
+
+def ctx_reply(ctx, response, dm_on_fail=True):
+    try:
+        ctx.reply(response)
+    except Exception as e:
+        print("couldn't reply in", ctx.subreddit, ": error", type(e).__name__)
+        if dm_on_fail:
+            r.redditor(str(ctx.author)).message("I couldn't reply to your comment, here's a PM instead", response)
+            print("dmd", ctx.author)
 
 
 def autoreply():  # auto-reply to comments in r/all
@@ -32,10 +32,10 @@ def autoreply():  # auto-reply to comments in r/all
                             continue
                     else:
                         continue  # if video type isn't supported, don't reply
-                    c.reply(re)
+                    ctx_reply(c, re, False)
         except:
-            print(traceback.format_exc())
-            time.sleep(1)
+            pass
+        time.sleep(1)
 
 
 def mentions():
@@ -71,7 +71,7 @@ def mentions():
                     except Exception as e:
                         print(traceback.format_exc())
                         re = bot.parse_response('error', type(e).__name__, 'youtube')
-                    msg.reply(re)
+                    ctx_reply(msg, re)
 
                 elif "u/find-song" in txt:
                     url = ""
@@ -102,7 +102,7 @@ def mentions():
                     if url != "":
                         data = bot.recognize_audio(bot.output_file, start_sec)
                         re = bot.parse_response(data, time_str, 'youtube_parent')
-                        msg.reply(re)
+                        ctx_reply(msg, re)
                     else:
                         for word in words:
                             try:
@@ -113,9 +113,9 @@ def mentions():
                         supported = bot.download_video(msg.submission.url)
                         if supported == 1:
                             data = bot.recognize_audio(bot.output_file, start_sec)
-                            msg.reply(bot.parse_response(data, bot.sectoMin(start_sec)))
+                            ctx_reply(msg, bot.parse_response(data, bot.sectoMin(start_sec)))
                         else:
-                            msg.reply(bot.parse_response("I don't currently support this video link type. Please check back later!"))
+                            ctx_reply(msg, "I don't currently support this video link type. Please check back later!", False)
 
                 elif ":" in txt:  # if a reply is just a timestamp
                     for word in words:
@@ -128,7 +128,7 @@ def mentions():
                     if supported == 1:
                         data = bot.recognize_audio(bot.output_file, start_sec)
                         re = bot.parse_response(data, bot.sectoMin(start_sec))
-                        msg.reply(re)
+                        ctx_reply(msg, re)
 
         except:
             print(traceback.format_exc())
