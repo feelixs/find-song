@@ -21,7 +21,7 @@ def recognize_audio(file, start_sec=0):
     }
     acr = ACRCloudRecognizer(login)
     data = json.loads(acr.recognize_by_file(file, start_sec, 30))  # try to recognize to the song using 30 seconds of the file's audio
-    print(data)
+    # print(data)
 
     # use acrcloud recognize function on file provided in get_song args, and load the data into a json object
 
@@ -301,7 +301,7 @@ def parse_response(data, start_sec="", content=""):
             stored_urls.append(spotify_url)
     if start_sec == 0:
         start_sec = "00:00:00"
-    if content == "youtube":  # if a user gave us a youtube link in a comment
+    if "youtube" in content:  # if a user gave us a youtube link in a comment
         if data == "error":
             re = "Looks like there's something wrong with the link you gave me, got error **" + start_sec + "**"
         else:
@@ -350,11 +350,14 @@ def parse_response(data, start_sec="", content=""):
                                         + confidence + "%)\n\n"
             else:
                 re = "No song was found"
-            re += "\n\n*Looks like you gave me a youtube video to watch. I started the search at " + start_sec + "*"
+            if content == "youtube_parent":
+                re += "\n\n*Looks like you wanted to see what song was playing in that youtube video. I started the search at " + start_sec + "*"
+            else:
+                re += "\n\n*Looks like you gave me a youtube video to watch. I started the search at " + start_sec + "*"
 
     else:  # if replying to anything other than a youtube link (mention, etc)
-        confidence = str(data['score'])
         if str(data["msg"]) == "success":
+            confidence = str(data['score'])
             s_index = "none"
             for i in range(len(stored_songs)):  # see if I have the spotify link for the song stored
                 if str(stored_songs[i]).lower() == str(data["title"]).lower() and str(stored_artists[i]).lower() == str(data['artists']).lower():
@@ -405,6 +408,7 @@ def parse_response(data, start_sec="", content=""):
             with open('stats.txt', 'ab') as fb:
                 fb.write(str(str(data["title"]) + ";;" + str(data["artists"]) + "\n").encode('utf8'))
         except:
+            print(data)
             print(traceback.format_exc())
     return re + config.Reddit.footer
 

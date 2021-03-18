@@ -51,11 +51,16 @@ def mentions():
                     time_str = "00:00:00"
                     try:
                         for word in words:
+                            try:
+                                checkint = int(word)
+                                checkint = True
+                            except:
+                                checkint = False
                             if "youtu.be" in word or "youtube" in word:
                                 url = word
                                 bot.download_yt(url)
                                 start_sec, time_str = bot.get_youtube_link_time(url)
-                            elif url != "" and start_sec == 0 and ":" in word:
+                            elif ":" in word or checkint:
                                 try:
                                     start_sec = bot.timestamp_to_sec(word)
                                     time_str = bot.sectoMin(start_sec)
@@ -69,18 +74,48 @@ def mentions():
                     msg.reply(re)
 
                 elif "u/find-song" in txt:
-                    for word in words:
-                        try:
-                            start_sec = bot.timestamp_to_sec(word)
-                            break
-                        except:
-                            pass
-                    supported = bot.download_video(msg.submission.url)
-                    if supported == 1:
+                    url = ""
+                    time_str = "00:00:00"
+                    try:
+                        parent_txt = str(msg.parent().body)
+                        parent_txt = parent_txt.split(" ")
+                        for word in parent_txt:
+                            if "youtu.be" in word or "youtube" in word:
+                                url = word
+                                bot.download_yt(url)
+                                start_sec, time_str = bot.get_youtube_link_time(url)
+                        txt = txt.split(" ")
+                        for word in txt:
+                            try:
+                                checkint = int(word)
+                                checkint = True
+                            except:
+                                checkint = False
+                            if ":" in word or checkint:
+                                try:
+                                    start_sec = bot.timestamp_to_sec(word)
+                                    time_str = bot.sectoMin(start_sec)
+                                except:
+                                    pass
+                    except:
+                        pass
+                    if url != "":
                         data = bot.recognize_audio(bot.output_file, start_sec)
-                        msg.reply(bot.parse_response(data, bot.sectoMin(start_sec)))
+                        re = bot.parse_response(data, time_str, 'youtube_parent')
+                        msg.reply(re)
                     else:
-                        msg.reply(bot.parse_response("I don't currently support this video link type. Please check back later!"))
+                        for word in words:
+                            try:
+                                start_sec = bot.timestamp_to_sec(word)
+                                break
+                            except:
+                                pass
+                        supported = bot.download_video(msg.submission.url)
+                        if supported == 1:
+                            data = bot.recognize_audio(bot.output_file, start_sec)
+                            msg.reply(bot.parse_response(data, bot.sectoMin(start_sec)))
+                        else:
+                            msg.reply(bot.parse_response("I don't currently support this video link type. Please check back later!"))
 
                 elif ":" in txt:  # if a reply is just a timestamp
                     for word in words:
