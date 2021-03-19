@@ -371,16 +371,41 @@ def parse_response(data, start_sec="", content=""):
 
     try:
         start_sec = timestamp_to_sec(start_sec)
-        if ("youtube" in song_url or "youtu.be" in song_url) and start_sec != 0:
-            song_url = song_url + "?t=" + str(start_sec)
-        if ("youtube" in content or "youtu.be" in content) and start_sec != 0:
-            content = content + "?t=" + str(start_sec)
+        if "youtube" in song_url or "youtu.be" in song_url:
+            wrd = ""
+            strt = False
+            for i in range(len(song_url)):
+                if song_url[i - 1] == "(":
+                    strt = True
+                if strt:
+                    if song_url[i] != ")":
+                        wrd += song_url[i]
+            if wrd != "":
+                song_url = wrd
+            if start_sec != 0:
+                song_url += "?t=" + str(start_sec)
     except:
         pass
     try:
-        start_sec = sectoMin(start_sec)
+        if "youtube" in content or "youtu.be" in content:
+            wrd = ""
+            strt = False
+            for i in range(len(content)):
+                if content[i-1] == "(":
+                    strt = True
+                if strt:
+                    if content[i] != ")":
+                        wrd += content[i]
+            if wrd != "":
+                content = wrd
+            if start_sec != 0:
+                content += "?t=" + str(start_sec)
     except:
         pass
+    try:
+        time_str = sectoMin(start_sec)
+    except:
+        time_str = "0:0:00"
     if data == "error":
         re = "I couldn't get the audio from that video, got error **" + start_sec + "**"
     else:
@@ -424,11 +449,14 @@ def parse_response(data, start_sec="", content=""):
         else:
             re = "No song was found"
         if "youtu.be" in content or "youtube" in content:
-            re += "\n\n*I started the search at [" + start_sec + "](" + content + ").*"
+            if start_sec != 0:
+                re += "\n\n*I started the search at [" + time_str + "](" + content + ").*"
+            else:
+                re += "\n\n*Looks like you wanted the song from [this video](" + content + ").*"
         elif content == "autoreply":
             re += "\n\n*I am a bot, and this action was performed automatically.*"
         else:
-            re += "\n\n*I started the search at " + start_sec + ". You can ask me to search somewhere else by responding to this comment.*"
+            re += "\n\n*I started the search at " + time_str + ".*\n\n*Reply with a timestamp to search somewhere else.*"
 
         if "No song was found" not in re:
             try:
