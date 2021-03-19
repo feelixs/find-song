@@ -29,4 +29,4 @@ and the bot will reply to you. Most youtube timestamp quicklinks will work (&t=,
 
 If you there's a bug, an optimization, or suggestion you'd like to point out or suggest I'm all ears.
 
-I'm by no means a master Python coder, so if you notice amiss don't hesitate to reach out!
+I'm by no means a master Python coder, so if you notice something amiss don't hesitate to reach out!
