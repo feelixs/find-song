@@ -365,17 +365,6 @@ def parse_response(data, start_sec="", content=""):
         song_url = find_link(data["title"], data['artists'])
     except:
         song_url = None
-
-    try:
-        start_sec = timestamp_to_sec(start_sec)
-        if "youtube" in song_url or "youtu.be" in song_url:
-            if "(" in song_url and ")" in song_url:
-                song_url = song_url.split("(")[-1]
-                song_url = song_url.split(")")[0]
-            if start_sec != 0 and not ("t=" in song_url or "time_continue=" in song_url or "start=" in song_url):
-                song_url += "?t=" + str(start_sec)
-    except:
-        pass
     try:
         if "youtube" in content or "youtu.be" in content:
             if "(" in content and ")" in content:
@@ -386,6 +375,7 @@ def parse_response(data, start_sec="", content=""):
     except:
         pass
     try:
+        start_sec = timestamp_to_sec(start_sec)
         time_str = sectoMin(start_sec)
     except:
         time_str = "0:0:00"
@@ -395,6 +385,11 @@ def parse_response(data, start_sec="", content=""):
         confidence = str(data['score'])
         if str(data["msg"]) == "success":
             if song_url is not None:  # if I have the spotify link
+                print(song_url)
+
+                if "youtube" in song_url or "youtu.be" in song_url:
+                    song_url += "&t=" + str(round(int(data['play_offset']) / 1000))
+
                 if int(confidence) == 100:
                     re = "[" + clear_formatting(str(data["title"])) + " by " + \
                          clear_formatting(str((data["artists"]))) + "](" + str(song_url) + ") (" + \
@@ -433,9 +428,11 @@ def parse_response(data, start_sec="", content=""):
             re = "No song was found"
         if "youtu.be" in content or "youtube" in content:
             if start_sec != 0:
-                re += "\n\n*Looks like you wanted the song playing [@" + time_str + "](" + content + ").*"
+                # re += "\n\n*Looks like you wanted the song playing [@" + time_str + "](" + content + ").*"
+                re += "\n\n*Looks like you wanted the song playing in a youtube video @" + time_str + ".*"
             else:
-                re += "\n\n*Looks like you wanted the song from [this video](" + content + ").*"
+                # re += "\n\n*Looks like you wanted the song from [this video](" + content + ").*"
+                re += "\n\n*Looks like you wanted the song from a youtube video.*"
         elif content == "autoreply":
             re += "\n\n*I am a bot, and this action was performed automatically.*"
         else:
