@@ -13,7 +13,6 @@ def ctx_reply(ctx, response, dm_on_fail=True):
         print("couldn't reply in", ctx.subreddit, ": error", type(e).__name__)
         if dm_on_fail:
             r.redditor(str(ctx.author)).message("I couldn't reply to your comment, here's a PM instead", response)
-            print("dmd", ctx.author)
 
 
 def autoreply():  # auto-reply to comments in r/all
@@ -77,26 +76,27 @@ def mentions():
                     url = ""
                     time_str = "00:00:00"
                     try:
-                        parent_txt = str(msg.parent().body)
-                        parent_txt = parent_txt.split(" ")
-                        for word in parent_txt:
-                            if "youtu.be" in word or "youtube" in word:
-                                url = word
-                                bot.download_yt(url)
-                                start_sec, time_str = bot.get_youtube_link_time(url)
-                        txt = txt.split(" ")
-                        for word in txt:
-                            try:
-                                checkint = int(word)
-                                checkint = True
-                            except:
-                                checkint = False
-                            if ":" in word or checkint:
+                        if str(msg.parent().author) != "find-song":
+                            parent_txt = str(msg.parent().body)
+                            parent_txt = parent_txt.split(" ")
+                            for word in parent_txt:
+                                if "youtu.be" in word or "youtube" in word:
+                                    url = word
+                                    bot.download_yt(url)
+                                    start_sec, time_str = bot.get_youtube_link_time(url)
+                            txt = txt.split(" ")
+                            for word in txt:
                                 try:
-                                    start_sec = bot.timestamp_to_sec(word)
-                                    time_str = bot.sectoMin(start_sec)
+                                    checkint = int(word)
+                                    checkint = True
                                 except:
-                                    pass
+                                    checkint = False
+                                if ":" in word or checkint:
+                                    try:
+                                        start_sec = bot.timestamp_to_sec(word)
+                                        time_str = bot.sectoMin(start_sec)
+                                    except:
+                                        pass
                     except:
                         pass
                     if url != "":
