@@ -127,14 +127,18 @@ def mentions():
                     import re
                     checkint = ""
                     for word in words:
-                        word = re.sub(r'[^a-zA-Z0-9]', '', word)  # exclude all chars except alphanumerals
+                        if ":" not in word:
+                            word = re.sub(r'[^a-zA-Z0-9]', '', word)  # exclude all chars except alphanumerals
                         try:
-                            checkint = int(word)
+                            if ":" not in word:
+                                checkint = int(word)
                             start_sec = bot.timestamp_to_sec(word)
+                            if ":" in word:
+                                checkint = True
                             break
                         except:
                             pass
-                    if checkint != "" and ("seconds" in words or "secs" in words or ":" in words):
+                    if checkint != "" and ("seconds" in words or "secs" in words or ":" in txt):
                         supported = bot.download_video(msg.submission.url)
                         if supported == 1:
                             data = bot.recognize_audio(bot.output_file, start_sec)
