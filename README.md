@@ -23,3 +23,10 @@ If you want to know what song is playing in a YouTube video, you can comment
 
 and the bot will reply to you. Most youtube timestamp quicklinks will work (&t=, &start=, &time_continue=, etc)
 
+******
+
+**Contact**
+
+If you there's a bug, an optimization, or suggestion you'd like to point out or suggest I'm all ears.
+
+I'm by no means a master Python coder, so if you notice amiss don't hesitate to reach out!
