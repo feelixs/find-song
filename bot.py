@@ -371,7 +371,7 @@ def parse_response(data, start_sec="", content=""):
 
     try:
         start_sec = timestamp_to_sec(start_sec)
-        if "youtube" in song_url or "youtu.be" in song_url:
+        if ("youtube" in song_url or "youtu.be" in song_url) and not ("t=" in song_url or "time_continue=" in song_url or "start=" in song_url):
             wrd = ""
             strt = False
             for i in range(len(song_url)):
@@ -387,7 +387,7 @@ def parse_response(data, start_sec="", content=""):
     except:
         pass
     try:
-        if "youtube" in content or "youtu.be" in content:
+        if ("youtube" in content or "youtu.be" in content) and not ("t=" in content or "time_continue=" in content or "start=" in content):
             wrd = ""
             strt = False
             for i in range(len(content)):
@@ -456,7 +456,8 @@ def parse_response(data, start_sec="", content=""):
         elif content == "autoreply":
             re += "\n\n*I am a bot, and this action was performed automatically.*"
         else:
-            re += "\n\n*I started the search at " + time_str + ".*\n\n*Reply with a timestamp to search somewhere else.*"
+            to = sectoMin(start_sec + 30)
+            re += "\n\n*I searched from " + time_str + "-" + to + ".*\n\n*Reply with a timestamp to search somewhere else.*"
 
         if "No song was found" not in re:
             try:
