@@ -69,8 +69,6 @@ def recognize_audio(file, start_sec=0):
     }
     acr = ACRCloudRecognizer(login)
     data = json.loads(acr.recognize_by_file(file, start_sec, 30))  # try to recognize to the song using 30 seconds of the file's audio
-    # print(data)
-
     # use acrcloud recognize function on file provided in get_song args, and load the data into a json object
 
     # for each json value we want, try to get it from the API request's data.
@@ -119,9 +117,9 @@ def recognize_audio(file, start_sec=0):
 
     ms_until_over = int(duration) - int(play_offset)
     if title != "":
-        for m in data['metadata']['music']:
-            print(m)
-        print("\n")
+        # for m in data['metadata']['music']:
+        #     print(m)
+        # print("\n")
         return {"msg": "success", "score": score, "title": title, "artists": artists, "album": album, "label": label, "genres": genres,
                 "release date": releasedate, "duration": duration, "play_offset": play_offset,
                 "ms_until_over": ms_until_over, "acrID": acrID}
@@ -199,7 +197,6 @@ def download_yt(link, file_name=output_file):
     try:
         os.remove(file_name)
     except:
-        print(traceback.format_exc())
         pass
     try:
         mp4.streams.filter(file_extension="mp4")
@@ -218,6 +215,8 @@ def download_twitchclip(url, output_path=output_file):
     token = data["access_token"]
     h = {"Client-ID": config.Twitch.client_id, 'client_secret': config.Twitch.client_secret, 'Authorization': "Bearer " + token}
     slug = str(url).split('/')[-1]
+    if "medium=redt" in slug:
+        slug = slug.split('?')[0]
     clip_info = requests.get("https://api.twitch.tv/helix/clips?id=" + slug, headers=h).json()
     thumb_url = clip_info['data'][0]['thumbnail_url']
     mp4_url = thumb_url.split("-preview", 1)[0] + ".mp4"
@@ -296,7 +295,7 @@ def find_link(input_song, input_artists):
 
         if data['msg'] == "success" and str(data['title']).lower() == input_song and str(data['artists']).lower() == input_artists:
             correct_url = url
-
+            print("youtube match")
     return correct_url
 
 
@@ -369,74 +368,40 @@ def parse_response(data, start_sec="", content=""):
         song_url = find_link(data["title"], data['artists'])
     else:
         song_url = None
-    if start_sec == 0:
-        start_sec = "00:00:00"
-    if "youtube" in content:  # if a user gave us a youtube link in a comment
-        if data == "error":
-            re = "I couldn't get the audio from that video, got error **" + start_sec + "**"
-        else:
-            confidence = str(data['score'])
-            if str(data["msg"]) == "success":
-                if song_url is not None:  # if I have the spotify link stored
-                    if int(confidence) == 100:
-                        re = "[" + clear_formatting(str(data["title"])) + " by " + \
-                             clear_formatting(str((data["artists"]))) + "](" + str(song_url) + ") (" + \
-                         str(mstoMin(int(data['play_offset']))) + "/" + str(
-                        mstoMin(int(data['duration']))) + ")\n\n"
-                    elif int(confidence) > 70:
-                        re = "I think it's:\n\n[" + clear_formatting(str(data["title"])) + " by " + \
-                             clear_formatting(str((data["artists"]))) + "](" + str(song_url) + ") (" + \
-                             str(mstoMin(int(data['play_offset']))) + "/" + str(mstoMin(int(data['duration']))) + ", confidence " \
-                                        + confidence + "%)\n\n"
-                    else:
-                        re = "I'm not sure, but this might be it:\n\n[" + clear_formatting(str(data["title"])) + " by " + \
-                             clear_formatting(str((data["artists"]))) + "](" + str(song_url) + ") (" + \
-                             str(mstoMin(int(data['play_offset']))) + "/" + str(mstoMin(int(data['duration']))) + ", confidence " \
-                                        + confidence + "%)\n\n"
 
-                else:  # otherwise give an acrcloud link
-                    if int(confidence) == 100:
-                        re = "[" + clear_formatting(str(data["title"])) + " by " + \
-                             clear_formatting(str((data["artists"]))) + "](https://www.aha-music.com/" \
-                             + acr_create_link(str(data["title"]), str(data["artists"]), str(data['acrID'])) + ") (" + \
-                             str(mstoMin(int(data['play_offset']))) + "/" + str(mstoMin(int(data['duration']))) + ")\n\n"
-                    elif int(confidence) > 70:
-                        re = "I think it's:\n\n[" + clear_formatting(str(data["title"])) + " by " + \
-                             clear_formatting(str((data["artists"]))) + "](https://www.aha-music.com/" \
-                             + acr_create_link(str(data["title"]), str(data["artists"]), str(data['acrID'])) + ") (" + \
-                             str(mstoMin(int(data['play_offset']))) + "/" + str(mstoMin(int(data['duration']))) + ", confidence " \
-                                        + confidence + "%)\n\n"
-                    else:
-                        re = "I'm not sure, but this might be it:\n\n[" + clear_formatting(str(data["title"])) + " by " + \
-                             clear_formatting(str((data["artists"]))) + "](https://www.aha-music.com/" \
-                             + acr_create_link(str(data["title"]), str(data["artists"]), str(data['acrID'])) + ") (" + \
-                             str(mstoMin(int(data['play_offset']))) + "/" + str(mstoMin(int(data['duration']))) + ", confidence " \
-                                        + confidence + "%)\n\n"
-            else:
-                re = "No song was found"
-            if content == "youtube_parent":
-                re += "\n\n*Looks like you wanted to see what song was playing in that youtube video. I started the search at " + start_sec + "*"
-            else:
-                re += "\n\n*Looks like you gave me a youtube video to watch. I started the search at " + start_sec + "*"
-
-    else:  # if replying to anything other than a youtube link (mention, etc)
+    try:
+        start_sec = timestamp_to_sec(start_sec)
+        if ("youtube" in song_url or "youtu.be" in song_url) and start_sec != 0:
+            song_url = song_url + "?t=" + str(start_sec)
+        if ("youtube" in content or "youtu.be" in content) and start_sec != 0:
+            content = content + "?t=" + str(start_sec)
+    except:
+        pass
+    try:
+        start_sec = sectoMin(start_sec)
+    except:
+        pass
+    if data == "error":
+        re = "I couldn't get the audio from that video, got error **" + start_sec + "**"
+    else:
+        confidence = str(data['score'])
         if str(data["msg"]) == "success":
-            confidence = str(data['score'])
-            if song_url is not None:  # if I have the spotify link stored
+            if song_url is not None:  # if I have the spotify link
                 if int(confidence) == 100:
                     re = "[" + clear_formatting(str(data["title"])) + " by " + \
                          clear_formatting(str((data["artists"]))) + "](" + str(song_url) + ") (" + \
-                         str(mstoMin(int(data['play_offset']))) + "/" + str(mstoMin(int(data['duration']))) + ")\n\n"
+                     str(mstoMin(int(data['play_offset']))) + "/" + str(
+                    mstoMin(int(data['duration']))) + ")\n\n"
                 elif int(confidence) > 70:
                     re = "I think it's:\n\n[" + clear_formatting(str(data["title"])) + " by " + \
                          clear_formatting(str((data["artists"]))) + "](" + str(song_url) + ") (" + \
                          str(mstoMin(int(data['play_offset']))) + "/" + str(mstoMin(int(data['duration']))) + ", confidence " \
-                                        + confidence + "%)\n\n"
+                                    + confidence + "%)\n\n"
                 else:
                     re = "I'm not sure, but this might be it:\n\n[" + clear_formatting(str(data["title"])) + " by " + \
                          clear_formatting(str((data["artists"]))) + "](" + str(song_url) + ") (" + \
                          str(mstoMin(int(data['play_offset']))) + "/" + str(mstoMin(int(data['duration']))) + ", confidence " \
-                                        + confidence + "%)\n\n"
+                                    + confidence + "%)\n\n"
 
             else:  # otherwise give an acrcloud link
                 if int(confidence) == 100:
@@ -448,26 +413,30 @@ def parse_response(data, start_sec="", content=""):
                     re = "I think it's:\n\n[" + clear_formatting(str(data["title"])) + " by " + \
                          clear_formatting(str((data["artists"]))) + "](https://www.aha-music.com/" \
                          + acr_create_link(str(data["title"]), str(data["artists"]), str(data['acrID'])) + ") (" + \
-                         str(mstoMin(int(data['play_offset']))) + "/" + str(
-                        mstoMin(int(data['duration']))) + ", confidence " \
-                         + confidence + "%)\n\n"
+                         str(mstoMin(int(data['play_offset']))) + "/" + str(mstoMin(int(data['duration']))) + ", confidence " \
+                                    + confidence + "%)\n\n"
                 else:
                     re = "I'm not sure, but this might be it:\n\n[" + clear_formatting(str(data["title"])) + " by " + \
                          clear_formatting(str((data["artists"]))) + "](https://www.aha-music.com/" \
                          + acr_create_link(str(data["title"]), str(data["artists"]), str(data['acrID'])) + ") (" + \
-                         str(mstoMin(int(data['play_offset']))) + "/" + str(
-                        mstoMin(int(data['duration']))) + ", confidence " \
-                         + confidence + "%)\n\n"
+                         str(mstoMin(int(data['play_offset']))) + "/" + str(mstoMin(int(data['duration']))) + ", confidence " \
+                                    + confidence + "%)\n\n"
         else:
             re = "No song was found"
-        re += "\n\n*I started the search at {}, ".format(start_sec) + "you can provide a timestamp in hour:min:sec to tell me where to search.*"
-    if "No song was found" not in re:
-        try:
-            with open('stats.txt', 'ab') as fb:
-                fb.write(str(str(data["title"]) + ";;" + str(data["artists"]) + "\n").encode('utf8'))
-        except:
-            print(data)
-            print(traceback.format_exc())
+        if "youtu.be" in content or "youtube" in content:
+            re += "\n\n*I started the search at [" + start_sec + "](" + content + ").*"
+        elif content == "autoreply":
+            re += "\n\n*I am a bot, and this action was performed automatically.*"
+        else:
+            re += "\n\n*I started the search at " + start_sec + ". You can ask me to search somewhere else by responding to this comment.*"
+
+        if "No song was found" not in re:
+            try:
+                with open('stats.txt', 'ab') as fb:
+                    fb.write(str(str(data["title"]) + ";;" + str(data["artists"]) + "\n").encode('utf8'))
+            except:
+                print(data)
+                print(traceback.format_exc())
     return re + config.Reddit.footer
 
 
