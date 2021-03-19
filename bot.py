@@ -457,7 +457,7 @@ def parse_response(data, start_sec="", content=""):
             re += "\n\n*I am a bot, and this action was performed automatically.*"
         else:
             to = sectoMin(start_sec + 30)
-            re += "\n\n*I searched from " + time_str + "-" + to + ".*\n\n*Reply with a timestamp to search somewhere else.*"
+            re += "\n\n*I tried searching from " + time_str + "-" + to + ".*\n\n*Reply with a timestamp to search somewhere else.*"
 
         if "No song was found" not in re:
             try:
