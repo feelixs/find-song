@@ -356,49 +356,32 @@ def get_youtube_link_time(url):
     else:
         secs = int(secs)
     total_secs = hours * 3600 + minuts * 60 + secs
-    if total_secs >= 3600:
-        time_str = sectoHour(total_secs)
-    else:
-        time_str = sectoMin(total_secs)
+    time_str = sectoMin(total_secs)
     return total_secs, time_str
 
 
 def parse_response(data, start_sec="", content=""):
-    if str(data["msg"]) == "success":
+    try:
         song_url = find_link(data["title"], data['artists'])
-    else:
+    except:
         song_url = None
 
     try:
         start_sec = timestamp_to_sec(start_sec)
-        if ("youtube" in song_url or "youtu.be" in song_url) and not ("t=" in song_url or "time_continue=" in song_url or "start=" in song_url):
-            wrd = ""
-            strt = False
-            for i in range(len(song_url)):
-                if song_url[i - 1] == "(":
-                    strt = True
-                if strt:
-                    if song_url[i] != ")":
-                        wrd += song_url[i]
-            if wrd != "":
-                song_url = wrd
-            if start_sec != 0:
+        if "youtube" in song_url or "youtu.be" in song_url:
+            if "(" in song_url and ")" in song_url:
+                song_url = song_url.split("(")[-1]
+                song_url = song_url.split(")")[0]
+            if start_sec != 0 and not ("t=" in song_url or "time_continue=" in song_url or "start=" in song_url):
                 song_url += "?t=" + str(start_sec)
     except:
         pass
     try:
-        if ("youtube" in content or "youtu.be" in content) and not ("t=" in content or "time_continue=" in content or "start=" in content):
-            wrd = ""
-            strt = False
-            for i in range(len(content)):
-                if content[i-1] == "(":
-                    strt = True
-                if strt:
-                    if content[i] != ")":
-                        wrd += content[i]
-            if wrd != "":
-                content = wrd
-            if start_sec != 0:
+        if "youtube" in content or "youtu.be" in content:
+            if "(" in content and ")" in content:
+                content = content.split("(")[-1]
+                content = content.split(")")[0]
+            if start_sec != 0 and not ("t=" in content or "time_continue=" in content or "start=" in content):
                 content += "?t=" + str(start_sec)
     except:
         pass
@@ -450,7 +433,7 @@ def parse_response(data, start_sec="", content=""):
             re = "No song was found"
         if "youtu.be" in content or "youtube" in content:
             if start_sec != 0:
-                re += "\n\n*I started the search at [" + time_str + "](" + content + ").*"
+                re += "\n\n*Looks like you wanted the song playing [@" + time_str + "](" + content + ").*"
             else:
                 re += "\n\n*Looks like you wanted the song from [this video](" + content + ").*"
         elif content == "autoreply":
