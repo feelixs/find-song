@@ -5,6 +5,54 @@ import traceback
 output_file = 'output.mp4'
 
 
+class Spotify:
+    def __init__(self):
+        import spotipy
+        from spotipy.oauth2 import SpotifyClientCredentials
+        self.scope = "user-library-read"
+        self.client = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials())
+
+
+class Chrome:
+    def start_driver(self):
+        from selenium import webdriver
+        self.options = webdriver.ChromeOptions()
+        self.options.add_argument("--mute-audio")
+        # self.options.add_argument("--no-startup-window")
+        self.driver = webdriver.Chrome("C:\\Users\mmh\Downloads\chromedriver_win32\chromedriver.exe", chrome_options=self.options)
+
+    def click_on_location(self, x, y):
+        from selenium.webdriver.common.action_chains import ActionChains
+        elem = self.driver.find_element_by_xpath('/html')
+        AC = ActionChains(self.driver)
+        AC.move_to_element(elem).move_by_offset(x, y).click().perform()
+
+    def search_download_recognize_youtube_video(self, song, artist):
+        import time
+        try:
+            self.start_driver()
+            self.driver.get('https://google.com/search?q=' + str(song) + ' by ' + str(artist) + ' youtube')
+            time.sleep(2)
+            try:
+                self.driver.find_element_by_xpath('/html/body/div[8]/div/div[8]/div/div[2]/div[3]/div[1]').click()
+            except:
+                pass
+            try:
+                elem = self.driver.find_element_by_link_text("Search for English results only")
+                self.click_on_location(-200, -215)
+            except:
+                self.click_on_location(-200, -250)
+            time.sleep(1)
+            url = self.driver.current_url
+            download_yt(url, 'scraper_output.mp4')
+            self.driver.quit()
+            return recognize_audio('scraper_output.mp4'), url
+        except Exception as e:
+            self.driver.quit()
+            print(traceback.format_exc())
+            raise e
+
+
 def authenticate():
     login = praw.Reddit(username='find-song', password=config.Reddit.psw, user_agent="songsearchv1", client_id=config.Reddit.client_id, client_secret=config.Reddit.client_secret)
     return login
@@ -70,13 +118,10 @@ def recognize_audio(file, start_sec=0):
         acrID = ""
 
     ms_until_over = int(duration) - int(play_offset)
-    try:
+    if title != "":
         for m in data['metadata']['music']:
             print(m)
-    except:
-        print(traceback.format_exc())
-    print("\n")
-    if title != "":
+        print("\n")
         return {"msg": "success", "score": score, "title": title, "artists": artists, "album": album, "label": label, "genres": genres,
                 "release date": releasedate, "duration": duration, "play_offset": play_offset,
                 "ms_until_over": ms_until_over, "acrID": acrID}
@@ -193,8 +238,7 @@ def acr_create_link(title, artists, acrid):
     url = ""
     spl = []
     word = ""
-    for i in range(
-            len(str(artists))):  # put each word in the 'artists' into a list, and take out parentheses and brackets
+    for i in range(len(str(artists))):  # put each word in the 'artists' into a list, and take out parentheses and brackets
         if str(artists)[i] != "[" and str(artists)[i] != "]" and str(artists)[i] != "(" and str(artists)[i] != ")" and str(artists)[i] != "*":
             if str(artists)[i] != " ":
                 word += str(artists)[i]
@@ -223,6 +267,37 @@ def acr_create_link(title, artists, acrid):
             url += "_"
     url += "-" + acrid
     return url
+
+
+def find_link(input_song, input_artists):
+    """Search spotify for song,
+     if that fails then google the youtube video.
+     Output link if either is successful"""
+    spotify = Spotify()
+    chrome = Chrome()
+    correct_url = None
+    input_song = str(input_song).lower()
+    input_artists = str(input_artists).lower()
+    results = spotify.client.search(q='track:' + str(input_song))['tracks']['items']
+    found = False
+    for r in results:
+        name = str(r['name'])
+        artist = str(r['artists'][0]['name'])
+        url = str(r['external_urls']['spotify'])
+        if name.lower() == input_song and artist.lower() == input_artists:
+            correct_url = url
+            found = True
+            break
+    if not found:
+        try:
+            data, url = chrome.search_download_recognize_youtube_video(input_song, input_artists)
+        except Exception as e:
+            data, url = {'msg': "error", 'type': type(e).__name__}, ""
+
+        if data['msg'] == "success" and str(data['title']).lower() == input_song and str(data['artists']).lower() == input_artists:
+            correct_url = url
+
+    return correct_url
 
 
 def get_youtube_link_time(url):
@@ -290,43 +365,32 @@ def get_youtube_link_time(url):
 
 
 def parse_response(data, start_sec="", content=""):
-    stored_songs, stored_artists, stored_urls = [], [], []
-    with open('scraper_output.txt', 'rb') as rf:
-        for line in rf:
-            line = line.decode('utf8')
-            line = line.strip()
-            song, artist, spotify_url = line.split(";;")
-            stored_songs.append(song)
-            stored_artists.append(artist)
-            stored_urls.append(spotify_url)
+    if str(data["msg"]) == "success":
+        song_url = find_link(data["title"], data['artists'])
+    else:
+        song_url = None
     if start_sec == 0:
         start_sec = "00:00:00"
     if "youtube" in content:  # if a user gave us a youtube link in a comment
         if data == "error":
-            re = "Looks like there's something wrong with the link you gave me, got error **" + start_sec + "**"
+            re = "I couldn't get the audio from that video, got error **" + start_sec + "**"
         else:
             confidence = str(data['score'])
             if str(data["msg"]) == "success":
-                s_index = "none"
-                for i in range(len(stored_songs)):  # see if I have the spotify link for the song stored
-                    if str(stored_songs[i]).lower() == str(data["title"]).lower() and str(stored_artists[i]).lower() == str(data['artists']).lower():
-                        s_index = i
-                        break
-                print(stored_songs, "\n", data["title"], "\n", stored_artists, "\n", data['artists'], "\nindex =", s_index)
-                if s_index != "none":  # if I have the spotify link stored
+                if song_url is not None:  # if I have the spotify link stored
                     if int(confidence) == 100:
                         re = "[" + clear_formatting(str(data["title"])) + " by " + \
-                             clear_formatting(str((data["artists"]))) + "](" + str(stored_urls[s_index]) + ") (" + \
+                             clear_formatting(str((data["artists"]))) + "](" + str(song_url) + ") (" + \
                          str(mstoMin(int(data['play_offset']))) + "/" + str(
                         mstoMin(int(data['duration']))) + ")\n\n"
                     elif int(confidence) > 70:
                         re = "I think it's:\n\n[" + clear_formatting(str(data["title"])) + " by " + \
-                             clear_formatting(str((data["artists"]))) + "](" + str(stored_urls[s_index]) + ") (" + \
+                             clear_formatting(str((data["artists"]))) + "](" + str(song_url) + ") (" + \
                              str(mstoMin(int(data['play_offset']))) + "/" + str(mstoMin(int(data['duration']))) + ", confidence " \
                                         + confidence + "%)\n\n"
                     else:
                         re = "I'm not sure, but this might be it:\n\n[" + clear_formatting(str(data["title"])) + " by " + \
-                             clear_formatting(str((data["artists"]))) + "](" + str(stored_urls[s_index]) + ") (" + \
+                             clear_formatting(str((data["artists"]))) + "](" + str(song_url) + ") (" + \
                              str(mstoMin(int(data['play_offset']))) + "/" + str(mstoMin(int(data['duration']))) + ", confidence " \
                                         + confidence + "%)\n\n"
 
@@ -358,25 +422,19 @@ def parse_response(data, start_sec="", content=""):
     else:  # if replying to anything other than a youtube link (mention, etc)
         if str(data["msg"]) == "success":
             confidence = str(data['score'])
-            s_index = "none"
-            for i in range(len(stored_songs)):  # see if I have the spotify link for the song stored
-                if str(stored_songs[i]).lower() == str(data["title"]).lower() and str(stored_artists[i]).lower() == str(data['artists']).lower():
-                    s_index = i
-                    break
-            print(stored_songs, "\n", data["title"], "\n", stored_artists, "\n", data['artists'], "\nindex =", s_index)
-            if s_index != "none":  # if I have the spotify link stored
+            if song_url is not None:  # if I have the spotify link stored
                 if int(confidence) == 100:
                     re = "[" + clear_formatting(str(data["title"])) + " by " + \
-                         clear_formatting(str((data["artists"]))) + "](" + str(stored_urls[s_index]) + ") (" + \
+                         clear_formatting(str((data["artists"]))) + "](" + str(song_url) + ") (" + \
                          str(mstoMin(int(data['play_offset']))) + "/" + str(mstoMin(int(data['duration']))) + ")\n\n"
                 elif int(confidence) > 70:
                     re = "I think it's:\n\n[" + clear_formatting(str(data["title"])) + " by " + \
-                         clear_formatting(str((data["artists"]))) + "](" + str(stored_urls[s_index]) + ") (" + \
+                         clear_formatting(str((data["artists"]))) + "](" + str(song_url) + ") (" + \
                          str(mstoMin(int(data['play_offset']))) + "/" + str(mstoMin(int(data['duration']))) + ", confidence " \
                                         + confidence + "%)\n\n"
                 else:
                     re = "I'm not sure, but this might be it:\n\n[" + clear_formatting(str(data["title"])) + " by " + \
-                         clear_formatting(str((data["artists"]))) + "](" + str(stored_urls[s_index]) + ") (" + \
+                         clear_formatting(str((data["artists"]))) + "](" + str(song_url) + ") (" + \
                          str(mstoMin(int(data['play_offset']))) + "/" + str(mstoMin(int(data['duration']))) + ", confidence " \
                                         + confidence + "%)\n\n"
 
