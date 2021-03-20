@@ -58,7 +58,7 @@ def authenticate():
     return login
 
 
-def recognize_audio(file, start_sec=0):
+def recognize_audio(file, start_sec=0, sample_length=30):
     """Requests data from ACRCloud and re-formats for manageability"""
     from acrcloud.recognizer import ACRCloudRecognizer
     import json
@@ -68,7 +68,7 @@ def recognize_audio(file, start_sec=0):
         "host": "identify-us-west-2.acrcloud.com"
     }
     acr = ACRCloudRecognizer(login)
-    data = json.loads(acr.recognize_by_file(file, start_sec, 30))  # try to recognize to the song using 30 seconds of the file's audio
+    data = json.loads(acr.recognize_by_file(file, start_sec, sample_length))  # try to recognize to the song using 30 seconds of the file's audio
     # use acrcloud recognize function on file provided in get_song args, and load the data into a json object
 
     # for each json value we want, try to get it from the API request's data.
@@ -360,7 +360,7 @@ def get_youtube_link_time(url):
     return total_secs, time_str
 
 
-def parse_response(data, start_sec="", content=""):
+def parse_response(data, start_sec="", content="", sample_length=30):
 
     try:
         if "youtube" in content or "youtu.be" in content:
@@ -379,7 +379,6 @@ def parse_response(data, start_sec="", content=""):
     try:
         song_url = find_link(data["title"], data['artists'], start_sec)
     except:
-        print(traceback.format_exc())
         song_url = None
     if data == "error":
         re = "I couldn't get the audio from that video, got error **" + start_sec + "**"
@@ -432,14 +431,15 @@ def parse_response(data, start_sec="", content=""):
         if "youtu.be" in content or "youtube" in content:
             if start_sec != 0:
                 # re += "\n\n*Looks like you wanted the song playing [@" + time_str + "](" + content + ").*"
-                re += "\n\n*Looks like you wanted the song playing in a youtube video @" + time_str + ".*"
+                to = sectoMin(start_sec + sample_length)
+                re += "\n\n*Looks like you wanted the song playing in a youtube video, I sampled audio from " + time_str + "-" + to + ".*"
             else:
                 # re += "\n\n*Looks like you wanted the song from [this video](" + content + ").*"
-                re += "\n\n*Looks like you wanted the song from a youtube video.*"
+                re += "\n\n*Looks like you wanted the song from a youtube video, I sampled audio from 0:00-0:30.*"
         elif content == "autoreply":
             re += "\n\n*I am a bot, and this action was performed automatically.*"
         else:
-            to = sectoMin(start_sec + 30)
+            to = sectoMin(start_sec + sample_length)
             re += "\n\n*I searched from " + time_str + "-" + to + ".*\n\n*Reply with a timestamp to start somewhere else.*"
 
         if "No song was found" not in re:
