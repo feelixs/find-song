@@ -43,7 +43,7 @@ def autoreply():  # auto-reply to comments in r/all
                     ctx_reply(c, re, False)
         except:
             pass
-        time.sleep(1)
+        time.sleep(0.5)
 
 
 def mentions():
@@ -195,7 +195,7 @@ def mentions():
 
         except:
             print(traceback.format_exc())
-        time.sleep(1)
+        time.sleep(0.5)
 
 
 if __name__ == '__main__':
