@@ -27,7 +27,7 @@ class Chrome:
         AC = ActionChains(self.driver)
         AC.move_to_element(elem).move_by_offset(x, y).click().perform()
 
-    def search_download_recognize_youtube_video(self, song, artist):
+    def search_download_recognize_youtube_video(self, song, artist, input_time):
         import time
         try:
             self.start_driver()
@@ -46,7 +46,7 @@ class Chrome:
             url = self.driver.current_url
             download_yt(url, 'scraper_output.mp4')
             self.driver.quit()
-            return recognize_audio('scraper_output.mp4'), url
+            return recognize_audio('scraper_output.mp4', input_time), url
         except Exception as e:
             self.driver.quit()
             print(traceback.format_exc())
@@ -268,7 +268,7 @@ def acr_create_link(title, artists, acrid):
     return url
 
 
-def find_link(input_song, input_artists):
+def find_link(input_song, input_artists, input_time):
     """Search spotify for song,
      if that fails then google the youtube video.
      Output link if either is successful"""
@@ -289,7 +289,7 @@ def find_link(input_song, input_artists):
             break
     if not found:
         try:
-            data, url = chrome.search_download_recognize_youtube_video(input_song, input_artists)
+            data, url = chrome.search_download_recognize_youtube_video(input_song, input_artists, input_time)
         except Exception as e:
             data, url = {'msg': "error", 'type': type(e).__name__}, ""
 
@@ -361,10 +361,7 @@ def get_youtube_link_time(url):
 
 
 def parse_response(data, start_sec="", content=""):
-    try:
-        song_url = find_link(data["title"], data['artists'])
-    except:
-        song_url = None
+
     try:
         if "youtube" in content or "youtu.be" in content:
             if "(" in content and ")" in content:
@@ -379,9 +376,15 @@ def parse_response(data, start_sec="", content=""):
         time_str = sectoMin(start_sec)
     except:
         time_str = "0:0:00"
+    try:
+        song_url = find_link(data["title"], data['artists'], start_sec)
+    except:
+        print(traceback.format_exc())
+        song_url = None
     if data == "error":
         re = "I couldn't get the audio from that video, got error **" + start_sec + "**"
     else:
+        print(song_url)
         confidence = str(data['score'])
         if str(data["msg"]) == "success":
             if song_url is not None:  # if I have the spotify link
