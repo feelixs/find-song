@@ -42,7 +42,6 @@ class Chrome:
                 self.click_on_location(-200, -215)
             except:
                 self.click_on_location(-200, -250)
-            time.sleep(1)
             url = self.driver.current_url
             download_yt(url, 'scraper_output.mp4')
             self.driver.quit()
@@ -277,25 +276,24 @@ def find_link(input_song, input_artists, input_time):
     correct_url = None
     input_song = str(input_song).lower()
     input_artists = str(input_artists).lower()
-    results = spotify.client.search(q='track:' + str(input_song))['tracks']['items']
-    found = False
-    for r in results:
-        name = str(r['name'])
-        artist = str(r['artists'][0]['name'])
-        url = str(r['external_urls']['spotify'])
-        if name.lower() == input_song and artist.lower() == input_artists:
-            correct_url = url
-            found = True
-            break
-    if not found:
-        try:
-            data, url = chrome.search_download_recognize_youtube_video(input_song, input_artists, input_time)
-        except Exception as e:
-            data, url = {'msg': "error", 'type': type(e).__name__}, ""
+    try:
+        data, url = chrome.search_download_recognize_youtube_video(input_song, input_artists, input_time)
+    except Exception as e:
+        data, url = {'msg': "error", 'type': type(e).__name__}, ""
+    if data['msg'] == "success" and str(data['title']).lower() == input_song and str(data['artists']).lower() == input_artists:
+        correct_url = url
+        print("youtube match")
+    if correct_url is None:
+        results = spotify.client.search(q='track:' + str(input_song))['tracks']['items']
+        for r in results:
+            name = str(r['name'])
+            artist = str(r['artists'][0]['name'])
+            url = str(r['external_urls']['spotify'])
+            if name.lower() == input_song and artist.lower() == input_artists:
+                correct_url = url
+                print("spotify match")
+                break
 
-        if data['msg'] == "success" and str(data['title']).lower() == input_song and str(data['artists']).lower() == input_artists:
-            correct_url = url
-            print("youtube match")
     return correct_url
 
 
@@ -383,7 +381,6 @@ def parse_response(data, start_sec="", content="", sample_length=30):
     if data == "error":
         re = "I couldn't get the audio from that video, got error **" + start_sec + "**"
     else:
-        print(song_url)
         confidence = str(data['score'])
         if str(data["msg"]) == "success":
             if song_url is not None:  # if I have the spotify link
