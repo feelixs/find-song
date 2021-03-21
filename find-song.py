@@ -13,9 +13,8 @@ def ctx_reply(ctx, response, dm_on_fail=True):
     except Exception as e:
         print("couldn't reply in", ctx.subreddit, ": error", type(e).__name__)
         if dm_on_fail:
-
             # r.redditor(str(ctx.author)).message("I couldn't reply to your comment, here's a PM instead", "This is a response to [this comment](" + ctx.+ ").\n\n" + str(response))
-            r.redditor(str(ctx.author)).message("I couldn't reply to your comment, here's a PM instead", response)
+            r.redditor(str(ctx.author)).message("I couldn't reply to your comment, here's a PM instead", response + "\n\n^(I don't monitor my PMs, so replying won't do anything)")
             print("dmd", ctx.author)
             print(ctx.submission.url)
             print(ctx.url)
@@ -70,13 +69,12 @@ def mentions():
                                 url = word
                                 bot.download_yt(url)
                                 start_sec, time_str = bot.get_youtube_link_time(url)
-                            elif ":" in word or checkint:
+                            elif ":" in word or checkint or "-" in word:
                                 try:
                                     spl = word.split("-")
                                     if len(spl) == 2:
-                                        word = spl[0]
+                                        start_sec = bot.timestamp_to_sec(spl[0])
                                         to = bot.timestamp_to_sec(spl[1])  # for when users type 0:30-1:21 etc
-                                    start_sec = bot.timestamp_to_sec(word)
                                     time_str = bot.sectoMin(start_sec)
                                 except:
                                     pass
@@ -111,7 +109,7 @@ def mentions():
                                     checkint = True
                                 except:
                                     checkint = False
-                                if ":" in word or checkint:
+                                if ":" in word or checkint or "-" in word:
                                     try:
                                         spl = word.split("-")
                                         if len(spl) == 2:
@@ -136,9 +134,8 @@ def mentions():
                             try:
                                 spl = word.split("-")
                                 if len(spl) == 2:
-                                    word = spl[0]
+                                    start_sec = bot.timestamp_to_sec(spl[0])
                                     to = bot.timestamp_to_sec(spl[1])
-                                start_sec = bot.timestamp_to_sec(word)
                                 time_str = bot.sectoMin(start_sec)
                                 break
                             except:
@@ -161,27 +158,38 @@ def mentions():
                     checkint = ""
                     int_bool = False
                     for word in words:
-                        if ":" not in word:
+                        if ":" not in word and "-" not in word:
                             word = re.sub(r'[^a-zA-Z0-9]', '', word)  # exclude all chars except alphanumerals
-                        try:
-                            if ":" not in word:
+
+                        if ":" not in word and "-" not in word:
+                            try:
                                 checkint = int(word)
                                 start_sec = checkint
                                 int_bool = True
                                 break
-                            else:
-                                checkint = True
-                                spl = word.split("-")
-                                if len(spl) == 2:
-                                    word = spl[0]
-                                    to = bot.timestamp_to_sec(spl[1])
-                                start_sec = bot.timestamp_to_sec(word)
+                            except:
+                                pass
+                        elif ":" not in word and "-" in word:
+                            spl = word.split("-")
+                            if len(spl) == 2:
+                                start_sec = bot.timestamp_to_sec(spl[0])
+                                to = bot.timestamp_to_sec(spl[1])
+                                try:
+                                    checkint = int(start_sec) + int(to)
+                                    break
+                                except:
+                                    pass
+                            break
+                        else:
+                            checkint = True
+                            spl = word.split("-")
+                            if len(spl) == 2:
+                                start_sec = bot.timestamp_to_sec(spl[0])
+                                to = bot.timestamp_to_sec(spl[1])
+                            break
 
-                                break
-                        except:
-                            pass
                     time_str = bot.sectoMin(start_sec)
-                    if checkint != "" and ("seconds" in words or "secs" in words or ":" in txt or int_bool):
+                    if checkint != "" and ("seconds" in words or "secs" in words or ":" in txt or "-" in txt or int_bool):
                         supported = bot.download_video(msg.submission.url)
                         if supported == 1:
                             if to != "":
