@@ -32,11 +32,14 @@ class Chrome:
         try:
             self.start_driver()
             self.driver.get('https://google.com/search?q=' + str(song) + ' by ' + str(artist) + ' youtube')
-            time.sleep(2)
-            try:
-                self.driver.find_element_by_xpath('/html/body/div[8]/div/div[8]/div/div[2]/div[3]/div[1]').click()
-            except:
-                pass
+            i = 0
+            while i == 20 or i == -1:
+                i += 1
+                try:
+                    self.driver.find_element_by_xpath('/html/body/div[8]/div/div[8]/div/div[2]/div[3]/div[1]').click()
+                    i = -1
+                except:
+                    pass
             try:
                 elem = self.driver.find_element_by_link_text("Search for English results only")
                 self.click_on_location(-200, -215)
@@ -276,25 +279,24 @@ def find_link(input_song, input_artists, input_time):
     correct_url = None
     input_song = str(input_song).lower()
     input_artists = str(input_artists).lower()
-    results = spotify.client.search(q='track:' + str(input_song))['tracks']['items']
-    found = False
-    for r in results:
-        name = str(r['name'])
-        artist = str(r['artists'][0]['name'])
-        url = str(r['external_urls']['spotify'])
-        if name.lower() == input_song and artist.lower() == input_artists:
-            correct_url = url
-            found = True
-            break
-    if not found:
-        try:
-            data, url = chrome.search_download_recognize_youtube_video(input_song, input_artists, input_time)
-        except Exception as e:
-            data, url = {'msg': "error", 'type': type(e).__name__}, ""
+    try:
+        data, url = chrome.search_download_recognize_youtube_video(input_song, input_artists, input_time)
+    except Exception as e:
+        data, url = {'msg': "error", 'type': type(e).__name__}, ""
 
-        if data['msg'] == "success" and str(data['title']).lower() == input_song and str(data['artists']).lower() == input_artists:
-            correct_url = url
-            print("youtube match")
+    if data['msg'] == "success" and str(data['title']).lower() == input_song and str(
+            data['artists']).lower() == input_artists:
+        correct_url = url
+        print("youtube match")
+    if correct_url is None:
+        results = spotify.client.search(q='track:' + str(input_song))['tracks']['items']
+        for r in results:
+            name = str(r['name'])
+            artist = str(r['artists'][0]['name'])
+            url = str(r['external_urls']['spotify'])
+            if name.lower() == input_song and artist.lower() == input_artists:
+                correct_url = url
+                break
     return correct_url
 
 
