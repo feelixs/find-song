@@ -125,7 +125,7 @@ def acr_create_link(title, artists, acrid):
     return url
 
 
-def find_link(acr_data, input_time):
+def find_link_youtube_spotify(acr_data, input_time):
     """Search spotify for song,
      if that fails then google the youtube video.
      Output link if either is successful"""
@@ -159,19 +159,42 @@ def find_link(acr_data, input_time):
     return correct_url
 
 
+def find_link_spotify(acr_data, input_time):
+    """Search spotify for song"""
+    correct_url = None
+    input_song = str(acr_data["title"]).lower()
+    input_artists = str(acr_data["artists"]).lower()
+    spotify = Spotify()
+    results = spotify.client.search(q='track:' + str(input_song))['tracks']['items']
+    for r in results:
+        name = str(r['name'])
+        artist = str(r['artists'][0]['name'])
+        url = str(r['external_urls']['spotify'])
+        if name.lower() == input_song and artist.lower() == input_artists:
+            correct_url = url
+            print("spotify match")
+            break
+    if correct_url is None:
+        correct_url = acr_create_link(str(acr_data["title"]), str(acr_data["artists"]), str(acr_data['acr_id']))
+    return correct_url
+
+
 def create_response(acr_data, context, user_url, start_sec, end_sec) -> str:
     if "https://youtu" in user_url and start_sec > 0:
         user_url += "&t=" + str(start_sec)
     if acr_data["msg"] == "success":
         title, artists, score, duration, play_offset = take_off_extra_chars(str(acr_data["title"])), take_off_extra_chars(str(acr_data["artists"])),\
-                                                       str(acr_data['score']), str(mstoMin(int(acr_data['duration']))), str(mstoMin(int(acr_data['play_offset'])))
-        url = find_link(acr_data, start_sec)
+                                                   str(acr_data['score']), str(mstoMin(int(acr_data['duration']))), str(mstoMin(int(acr_data['play_offset'])))
+        if context == "autoreply":
+            url = find_link_spotify(acr_data, start_sec)
+        else:
+            url = find_link_youtube_spotify(acr_data, start_sec)
         if int(score) == 100:
             response = "[" + title + " by " + artists + "](" + url + ") (" + play_offset + " / " + duration + ")"
         elif int(score) > 70:
-            response = "I think it's:\n\n[" + title + " by " + artists + "](" + url + ") (" + play_offset + " / " + duration + ", confidence " + score + ")"
+            response = "I think it's:\n\n[" + title + " by " + artists + "](" + url + ") (" + play_offset + " / " + duration + ", confidence " + score + "%)"
         else:
-            response = "I'm not sure, but it might be:\n\n[" + title + " by " + artists + "](" + url + ") (" + play_offset + " / " + duration + ", confidence " + score + ")"
+            response = "I'm not sure, but it might be:\n\n[" + title + " by " + artists + "](" + url + ") (" + play_offset + " / " + duration + ", confidence " + score + "%)"
     else:
         response = "No song was found"
     start_sec, end_sec = sectoMin(start_sec), sectoMin(end_sec)
@@ -184,7 +207,7 @@ def create_response(acr_data, context, user_url, start_sec, end_sec) -> str:
     elif context == "video_submission":
         response += "\n\n*Looks like you wanted the song from [here](" + user_url + "). I searched from " + str(start_sec) + "-" + str(end_sec) + "*"
     else:
-        response += "\n\n*I am a bot, and this action was performed automatically*"
+        response += "\n\n*I am a bot, and this action was performed automatically. I sampled audio from " + str(start_sec) + "-" + str(end_sec) + " in [this link](" + user_url + ")*"
 
     return response + config.Reddit.footer
 
@@ -346,5 +369,22 @@ def download_twitchclip(url, output_path=output_file):
     mp4_url = thumb_url.split("-preview", 1)[0] + ".mp4"
     urllib.request.urlretrieve(mp4_url, output_path)
     return output_path
+
+
+def download_video(video_url):
+    video_url = str(video_url)
+    supported = 1
+    if 'v.redd.it' in video_url:  # for videos uploaded to reddit
+        url = video_url + "/DASH_audio.mp4"
+        of = download_reddit(url)
+    elif 'youtu.be' in video_url or 'youtube' in video_url:  # for youtube links
+        url = video_url
+        of = download_yt(url)
+    elif 'twitch.tv' in video_url:  # for twitch links
+        url = video_url
+        of = download_twitchclip(url)
+    else:  # for other links
+        supported = 0
+    return supported, of
 
 
