@@ -10,12 +10,15 @@ r = misc.authenticate()
 def mentions_reply():
     while True:
         for msg in r.inbox.unread():
-            print(msg.body)
             timer = time.time()
             ctx, comment = None, None
             if ("u/" + config.Reddit.user) in msg.body:  # if it's a mention
-                comment = msg.reply("*One sec, I'm sampling the audio...*\n\nRefresh in a few seconds to see the result")
-                print("did quick comment after ", time.time() - timer)
+                try:
+                    comment = msg.reply("*One sec, I'm sampling the audio...*\n\nRefresh in a few seconds to see the result")
+                except:
+                    pass
+                print(msg.body, "did quick comment after ", time.time() - timer)
+
             try:
                 try:  # check if the parent comment (if there is any) contains a youtube link
                     if str(msg.parent().author) != config.Reddit.user and "https://" in str(msg.parent().body):  # if there's no parent comment it will error out into the except statement
@@ -85,7 +88,10 @@ def mentions_reply():
                     to = start + 30
                 start, to = misc.sectoMin(start), misc.sectoMin(to)
                 if comment is None:
-                    msg.reply("*One sec, I'm sampling the audio...*\n\nRefresh in a few seconds to see the result\n\n^(You gave me~" + ctx + "~)\n\n^(Your url~" + video_url + "~)\n\n^(I'm searching from~" + start + "~" + to + "~)" + config.Reddit.footer)
+                    try:
+                        msg.reply("*One sec, I'm sampling the audio...*\n\nRefresh in a few seconds to see the result\n\n^(You gave me~" + ctx + "~)\n\n^(Your url~" + video_url + "~)\n\n^(I'm searching from~" + start + "~" + to + "~)" + config.Reddit.footer)
+                    except:
+                        pass
                 else:
                     comment.edit("*One sec, I'm sampling the audio...*\n\nRefresh in a few seconds to see the result\n\n^(You gave me~" + ctx + "~)\n\n^(Your url~" + video_url + "~)\n\n^(I'm searching from~" + start + "~" + to + "~)" + config.Reddit.footer)
                     print(time.time() - timer)
@@ -118,6 +124,9 @@ def edit_comments():
                     comment.edit(misc.create_response(data, ctx, ctx_url, start, to))
                     with open('edited.txt', 'a') as f:  # don't edit this comment again
                         f.write(comment.id + "\n")
+                elif time.time() - int(comment.created_utc) > 10 and ("You gave me" not in comment.body and " by " not in comment.body and "No song was found" not in comment.body):
+                    comment.delete()
+
             except Exception as e:
                 print(traceback.format_exc())
                 comment.edit("Something went wrong, got error **" + type(e).__name__ + "**" + config.Reddit.footer)
@@ -125,7 +134,44 @@ def edit_comments():
                     f.write(comment.id + "\n")
 
 
+def auto_reply():  # auto-reply to comments in r/all
+    while True:
+        try:
+            s = r.subreddit('all').comments()
+            for c in s:
+                b_txt = str(c.body).lower()
+                if "can i get the song" in b_txt or "what song is this" in b_txt or "what's the song" in b_txt or "what's this song" in b_txt or "what is this song" in b_txt or "what song is playing" in b_txt or "what track is this" in b_txt or "what track is that" in b_txt:
+                    with open('replied.txt', 'r+') as rf:
+                        txt = rf.read()
+                        if c.id not in txt:
+                            rf.write(txt + c.id + "\n")
+                        else:
+                            continue
+                    surl = c.submission.url
+                    supported, output_file = misc.download_video(surl)
+                    try:
+                        start_sec = misc.get_yt_link_time(surl)
+                    except:
+                        start_sec = 0
+                    if supported == 1:
+                        data = misc.identify_audio(output_file, start_sec)
+                        confidence = int(data['score'])
+                        if str(data["msg"]) == "success" and confidence >= 80:
+                            re = misc.create_response(data, "autoreply", surl, start_sec, start_sec + 30)
+                        else:  # if couldn't recognize or confidence < 50, don't reply
+                            continue
+                        print(c.subreddit, ">", c.author, ">", c.body)
+                        print(data)
+                    else:
+                        continue  # if video type isn't supported, don't reply
+                    c.reply(re)
+        except:
+            print(traceback.format_exc())
+            pass
+
+
 if __name__ == '__main__':
     with concurrent.futures.ProcessPoolExecutor() as proc:
         mentions_proc = proc.submit(mentions_reply)
         edit_proc = proc.submit(edit_comments)
+        auto_proc = proc.submit(auto_reply)
