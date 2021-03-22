@@ -11,8 +11,7 @@ When mentioned in a comment, find-song will reply if the comment is:
 
 - in a post with a v.redd.it, youtube, or twitch.tv video link
 - is a reply to a comment that has a compatible link
-
-Also, if you reply to one of find-song's comments with a link, it will try to find the song.
+- is a reply to one of find-song's comments, and contains a timestamp or valid link
 
 >**Timestamps**
 
