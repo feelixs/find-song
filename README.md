@@ -23,7 +23,7 @@ If a timestamp is included in a comment mentioning find-song, it will search at 
 - 40 (just a single seconds value, this is the same as 0:40-1:10)
 
 You can also reply to one of find-song's comments with a timestamp to make it start a search at the given time. This will make the bot default to any videos/links in the submission itself, not parent comments. 
-
+******
 >>**FAQ**
 
 >**Where does find-song get audio fingerprints?**
