@@ -39,7 +39,7 @@ Before editing the song information into one of its comments, find-song will do 
 
 If the youtube search didn't yield any results or didn't match, it searches the Spotify API to find *exact matches* of the song name & artists from the ACRCloud request.
 
-If none of those work, find-song defualts to constructing a link using ACRCloud's database website, [aha-music.com](https://www.aha-music.com/7427816c27a56f58692975dcb6e5c0fe/Rick_Astley-Never_Gonna_Give_You_Up-7427816c27a56f58692975dcb6e5c0fe?utm_source=chrome&utm_medium=extension).
+If none of those work, find-song defualts to constructing a link using ACRCloud's database website, [aha-music.com](https://www.aha-music.com/Rick_Astley-Never_Gonna_Give_You_Up-7427816c27a56f58692975dcb6e5c0fe).
 
 >**Other questions, comments, critiques, etc etc**
 
