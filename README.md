@@ -44,4 +44,4 @@ If none of those work, find-song defualts to constructing a link using ACRCloud'
 
 **Other questions, comments, critiques, etc etc**
 
-I'm by no means a master coder, so if you want to tell me about one of the mistakes or possible improvements please contact me via GitHub or via my [Reddit](https://www.reddit.com/message/compose?to=Fhyke&subject=contact%20about%20find-song).
+I'm by no means a master coder, so if you want to tell me about one of the mistakes or possible improvements please contact me via [GitHub](https://github.com/mike-fmh/find-song) or via my [Reddit](https://www.reddit.com/message/compose?to=Fhyke&subject=contact%20about%20find-song).
