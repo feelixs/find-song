@@ -66,7 +66,7 @@ Before editing the song information into one of its comments, find-song will do 
 
 If the youtube search didn't yield any results or didn't match, it searches the Spotify API to find exact matches of the song name & artists from the ACRCloud request.
 
-If none of those work, find-song defualts to constructing a link using ACRCloud's database website, aha-music.com.
+If none of those work, find-song defaults to constructing a link using ACRCloud's database website, aha-music.com.
 
 <br />
 
