@@ -47,7 +47,7 @@ This also works when replying to comments with links:
 
 ******
 
->>**More info**
+**More info**
 
 >**Where does find-song get fingerprints?**
 
