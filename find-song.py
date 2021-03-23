@@ -11,20 +11,19 @@ def mentions_reply():
     while True:
         for msg in r.inbox.unread():
             timer = time.time()
-            ctx, comment = None, None
-            if ("u/" + config.Reddit.user) in msg.body:  # if it's a mention
+            comment = None
+            if "u/find-song" in msg.body:  # if it's a mention
                 try:
                     comment = msg.reply("*One sec, I'm sampling the audio...*\n\nRefresh in a few seconds to see the result")
                 except:
                     pass
-                print(msg.body, "did quick comment after ", time.time() - timer)
-
+            ctx = None
             try:
                 try:  # check if the parent comment (if there is any) contains a youtube link
                     if str(msg.parent().author) != config.Reddit.user and "https://" in str(msg.parent().body):  # if there's no parent comment it will error out into the except statement
                         words = str(msg.parent().body).split(" ")
                         for word in words:
-                            if "https://youtu" in word or "https://twitch.tv" in word or "https://v.redd.it" in word:  # make sure the parent has a compatible link
+                            if "https://youtu" in word or "twitch.tv" in word or "https://v.redd.it" in word:  # make sure the parent has a compatible link
                                 ctx, video_url = "link_parent", word
                                 break
                     else:
@@ -48,7 +47,6 @@ def mentions_reply():
                             ctx = "video_submission"
                         else:
                             continue
-
                 start = -1
                 to = -1
                 msg_words = str(msg.body).split(" ")  # get timestamp from original msg
@@ -94,10 +92,9 @@ def mentions_reply():
                         pass
                 else:
                     comment.edit("*One sec, I'm sampling the audio...*\n\nRefresh in a few seconds to see the result\n\n^(You gave me~" + ctx + "~)\n\n^(Your url~" + video_url + "~)\n\n^(I'm searching from~" + start + "~" + to + "~)" + config.Reddit.footer)
-                    print(time.time() - timer)
             except Exception as e:
-                print(traceback.format_exc())
-                print(type(e).__name__)
+                if comment is not None:
+                    comment.edit("Something went wrong, got error **" + type(e).__name__ + "**" + config.Reddit.footer)
             msg.mark_read()
 
 
@@ -110,25 +107,22 @@ def edit_comments():
                 if str(comment.id) not in edited and "You gave me" in comment.body:
                     c_attrs = str(comment.body).split("~")
                     ctx, ctx_url, start, to = c_attrs[1], c_attrs[3], misc.timestamptoSec(c_attrs[5]), misc.timestamptoSec(c_attrs[6])
-                    print(ctx, ctx_url, start, to)
                     if "https://v.redd.it" in ctx_url:
                         output_file = misc.download_reddit(ctx_url + "/DASH_audio.mp4")
-                    elif "https://twitch.tv" in ctx_url:
+                    elif "twitch.tv" in ctx_url:
                         output_file = misc.download_twitchclip(ctx_url)
                     elif "https://youtu" in ctx_url:
                         output_file = misc.download_yt(ctx_url)
                     else:
                         output_file = ""
                     data = misc.identify_audio(output_file, start, to)
-                    print(data)
                     comment.edit(misc.create_response(data, ctx, ctx_url, start, to))
                     with open('edited.txt', 'a') as f:  # don't edit this comment again
                         f.write(comment.id + "\n")
-                elif time.time() - int(comment.created_utc) > 10 and ("You gave me" not in comment.body and " by " not in comment.body and "No song was found" not in comment.body):
+                elif time.time() - int(comment.created_utc) > 60 and ("You gave me" not in comment.body and " by " not in comment.body and "No song was found" not in comment.body):
                     comment.delete()
 
             except Exception as e:
-                print(traceback.format_exc())
                 comment.edit("Something went wrong, got error **" + type(e).__name__ + "**" + config.Reddit.footer)
                 with open('edited.txt', 'a') as f:  # don't edit this comment again
                     f.write(comment.id + "\n")
@@ -140,13 +134,12 @@ def auto_reply():  # auto-reply to comments in r/all
             s = r.subreddit('all').comments()
             for c in s:
                 b_txt = str(c.body).lower()
-                if "can i get the song" in b_txt or "what song is this" in b_txt or "what's the song" in b_txt or "what's this song" in b_txt or "what is this song" in b_txt or "what song is playing" in b_txt or "what track is this" in b_txt or "what track is that" in b_txt:
-                    with open('replied.txt', 'r+') as rf:
-                        txt = rf.read()
-                        if c.id not in txt:
-                            rf.write(txt + c.id + "\n")
-                        else:
-                            continue
+                reply_bool = False
+                for i in range(len(config.Reddit.activators)):
+                    if config.Reddit.activators[i] in b_txt:
+                        reply_bool = True
+                        break
+                if reply_bool:
                     surl = c.submission.url
                     supported, output_file = misc.download_video(surl)
                     try:
@@ -160,13 +153,10 @@ def auto_reply():  # auto-reply to comments in r/all
                             re = misc.create_response(data, "autoreply", surl, start_sec, start_sec + 30)
                         else:  # if couldn't recognize or confidence < 50, don't reply
                             continue
-                        print(c.subreddit, ">", c.author, ">", c.body)
-                        print(data)
                     else:
                         continue  # if video type isn't supported, don't reply
                     c.reply(re)
         except:
-            print(traceback.format_exc())
             pass
 
 
