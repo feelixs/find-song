@@ -1,46 +1,77 @@
-**find-song**
-
-A Reddit bot that auto-replies to comments mentioning u/find-song, as well as comments in r/all that ask "what's the name of the song?" or "what's this song?"
+**find-song: Music recognition for Reddit**
 
 
-*****
+Ever seen a Reddit post playing a fire song that you just want to hear more of? 
 
->**How to use find-song**
+Well, just use the Reddit bot for identifying songs from v.redd.it, twitch.tv, and youtube links: [u/find-song](https://reddit.com/user/find-song)
 
-When mentioned in a comment, find-song will reply if the comment is:
-
-- in a post with a v.redd.it, youtube, or twitch.tv video link
-- is a reply to a comment that has a compatible link
-- is a reply to one of find-song's comments, and contains a timestamp or valid link
-
->**Timestamps**
-
-If a timestamp is included in a comment mentioning find-song, it will search at the provided time. Otherwise it samples from 0:00-0:30. Supported timestamps include:
-- 0:30-1:20 (a start and an end in minutes)
-- 0:25 (a single minute value, this is the same as 0:25-0:55 since find-song does a 30-second-long search if not given an endpoint)
-- 25-120 (a start and an end in seconds. This would be the same as 0:25-2:00)
-- 40 (just a single seconds value, this is the same as 0:40-1:10)
-
-You can also reply to one of find-song's comments with a timestamp to make it start a search at the given time. This will make the bot default to any videos/links in the submission itself, not parent comments. 
 ******
->>**FAQ**
 
->**Where does find-song get audio fingerprints?**
+Simply mention him in the comments of a post, and he'll grab the audio playing in the post's link and reply with any detected song.
 
-find-song uses the [ACRCloud API](https://www.acrcloud.com/) to identify audio. There's another bot, u/RecognizeSong, that came after u/find-song that works similarly but uses a different service, [Audd.io](https://audd.io/). Sometimes both bots will reply to u/find-song comments so there's a better chance of recognizing audio.
+![image](/images/findsong1.JPG)
 
->**How does it work?**
+******
+<br />
 
-When find-song replies to your comment, it will first give some information about the search, including the link you provided it and the timestamps it's searching from. After it does an ACRCloud request it will edit this comment to include the song name and the artists it's by. If ACRCloud returns an error, it edits the comment to "No song was found".
+<br />
 
->**Where does find-song get its links?**
 
-Before editing the song information into one of its comments, find-song will do a quick google search using [selenium](https://selenium-python.readthedocs.io/installation.html)  and the song title & artists. If it finds a youtube video, it does an ACRCloud request on that video to see if its audio matches that of the first request - if it does, it includes the video in its reply.
+**Optional parameters & Extra functionalities**
 
-If the youtube search didn't yield any results or didn't match, it searches the Spotify API to find *exact matches* of the song name & artists from the ACRCloud request.
+You can give find-song a timestamp if you want him to search at a specific point in the video.
 
-If none of those work, find-song defualts to constructing a link using ACRCloud's database website, [aha-music.com](https://www.aha-music.com/Rick_Astley-Never_Gonna_Give_You_Up-7427816c27a56f58692975dcb6e5c0fe).
+find-song auto-parses youtube links that are timestamped, so if there's a "&t=" in the link he'll start the search at the youtube timestamp.
 
->**Other questions, comments, critiques, etc etc**
+![image](/images/findsong2.JPG)
 
-I'm by no means a master coder, so if you want to tell me about one of the mistakes or possible improvements please contact me via [GitHub](https://github.com/mike-fmh/find-song) or via my [Reddit](https://www.reddit.com/message/compose?to=Fhyke&subject=contact%20about%20find-song).
+
+
+<br />
+
+It's also possible to directly supply find-song a link to sample - doing so will override the submission link:
+
+![image](/images/findsong3.JPG)
+
+<br />
+
+This also works when replying to comments with links:
+
+![image](/images/findsong4.JPG)
+
+<br />
+
+<br />
+
+<br />
+
+******
+
+>>**More info**
+
+>**Where does find-song get fingerprints?**
+
+find-song uses the ACRCloud API to identify audio. The API is fairly accurate, even on videos where there's some background noise in addition to the song. In general the longer the clip the better, find-song usually has the most trouble with clips <15 seconds long.
+
+There's also another bot that came after u/find-song which works similarly, u/RecognizeSong, but it uses a different service. Sometimes both bots will reply to u/find-song comments, but it depends on the subreddit and if u/RecognizeAudio identified the song as well.
+
+
+>**How does the bot work?**
+
+When find-song replies to your comment, it will first give some information about the search, including the link you provided it and the timestamps it's searching. After it does an ACRCloud request it will edit this comment to include the song name and the artists it's by. If ACRCloud returns an error, it edits the comment to "No song was found".
+
+>**Where does it get its links?**
+
+Before editing the song information into one of its comments, find-song will do a quick google search using selenium and the song title & artists. If it finds a youtube video, it does an ACRCloud request on that video to see if its audio matches that of the first request - if it does, it includes the video in its reply.
+
+If the youtube search didn't yield any results or didn't match, it searches the Spotify API to find exact matches of the song name & artists from the ACRCloud request.
+
+If none of those work, find-song defualts to constructing a link using ACRCloud's database website, aha-music.com.
+
+<br />
+
+<br />
+
+If you have any suggestions, comments, or questions you can contact me via GitHub or [Reddit](https://www.reddit.com/message/compose?to=Fhyke&subject=contact%20about%20find-song)
+
+Thanks for reading & may the beats be ever in your favor
