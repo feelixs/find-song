@@ -385,6 +385,7 @@ def download_video(video_url):
         of = download_twitchclip(url)
     else:  # for other links
         supported = 0
+        of = 0
     return supported, of
 
 
