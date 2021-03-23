@@ -71,7 +71,9 @@ If none of those work, find-song defualts to constructing a link using ACRCloud'
 <br />
 
 <br />
+
 ******
+
 If you have any suggestions, comments, or questions you can contact me via GitHub or [Reddit](https://www.reddit.com/message/compose?to=Fhyke&subject=contact%20about%20find-song)
 
 Thanks for reading & may the beats be ever in your favor
