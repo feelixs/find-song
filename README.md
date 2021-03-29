@@ -56,13 +56,9 @@ find-song uses the ACRCloud API to identify audio. The API is fairly accurate, e
 There's also another bot that came after u/find-song which works similarly, u/RecognizeSong, but it uses a different service. Sometimes both bots will reply to u/find-song comments, but it depends on the subreddit and if u/RecognizeAudio identified the song as well.
 
 
->**How does the bot work?**
-
-When find-song replies to your comment, it will first give some information about the search, including the link you provided it and the timestamps it's searching. After it does an ACRCloud request it will edit this comment to include the song name and the artists it's by. If ACRCloud returns an error, it edits the comment to "No song was found".
-
 >**Where does it get its links?**
 
-Before editing the song information into one of its comments, find-song will do a quick google search using selenium and the song title & artists. If it finds a youtube video, it does an ACRCloud request on that video to see if its audio matches that of the first request - if it does, it includes the video in its reply.
+Before replying with the song information, find-song will do a quick google search using selenium and the song title & artists. If it finds a youtube video, it does an ACRCloud request on that video to see if its audio matches that of the first request - if it does, it includes the video in its reply.
 
 If the youtube search didn't yield any results or didn't match, it searches the Spotify API to find exact matches of the song name & artists from the ACRCloud request.
 
