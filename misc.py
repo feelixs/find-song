@@ -73,7 +73,11 @@ def identify_audio(file=None, start_sec=0, end_sec=None):
         "host": "identify-us-west-2.acrcloud.com"
     }
     acr = ACRCloudRecognizer(login)
-    sample_length = end_sec - start_sec
+    try:
+        sample_length = end_sec - start_sec
+    except TypeError:
+        sample_length = timestamptoSec(end_sec) - timestamptoSec(start_sec)
+
     try:
         data = json.loads(acr.recognize_by_file(file, start_sec, sample_length))
         os.remove(file)  # delete the file since we don't need it anymore
@@ -188,7 +192,11 @@ def create_response(acr_data, context, user_url, start_sec, end_sec) -> str:
         if context == "autoreply":
             url = find_link_spotify(acr_data, start_sec)
         else:
-            url = find_link_youtube_spotify(acr_data, start_sec)
+            # url = find_link_spotify(acr_data, start_sec)
+            try:
+                url = find_link_youtube_spotify(acr_data, start_sec)
+            except:
+                url = find_link_spotify(acr_data, start_sec)
         if int(score) == 100:
             response = "[" + title + " by " + artists + "](" + url + ") (" + play_offset + " / " + duration + ")"
         elif int(score) > 70:
@@ -207,7 +215,7 @@ def create_response(acr_data, context, user_url, start_sec, end_sec) -> str:
     elif context == "video_submission":
         response += "\n\n*Looks like you wanted the song from [here](" + user_url + "). I searched from " + str(start_sec) + "-" + str(end_sec) + "*"
     else:
-        response += "\n\n*I am a bot, and this action was performed automatically. I sampled audio from " + str(start_sec) + "-" + str(end_sec) + " in [this link](" + user_url + ")*"
+        response += "\n\n*I am a bot, and this action was performed automatically*"
 
     return response + config.Reddit.footer
 
@@ -308,7 +316,6 @@ def get_yt_link_time(url) -> int:
 
 
 def clear_formatting(string) -> str:
-    print(string)
     word = ""
     if "]" in string:
         skip_text = False
@@ -319,7 +326,6 @@ def clear_formatting(string) -> str:
             skip_text = True
         if letter != "[" and letter != "]" and letter != "(" and letter != ")" and skip_text:
             word += letter
-    print(word)
     return word
 
 
@@ -389,3 +395,5 @@ def download_video(video_url):
     return supported, of
 
 
+class NoVideo(Exception):
+    pass
