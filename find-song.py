@@ -89,7 +89,10 @@ def mentions_reply():
                     elif "https://youtu" in video_url or "https://www.youtu" in video_url:
                         output_file = misc.download_yt(video_url)
                     else:
-                        raise misc.NoVideo
+                        try:
+                            output_file = misc.download_reddit(video_url)
+                        except:
+                            raise misc.NoVideo
                     data = misc.identify_audio(output_file, start, to)
 
                     if msg.was_comment:  # if it was a comment, reply
