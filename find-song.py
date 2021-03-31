@@ -103,8 +103,8 @@ def mentions_reply():
                                 r.redditor(str(msg.author)).message("I couldn't reply to your comment, here's a PM instead", misc.create_response(data, ctx, video_url, start, to) + "\n\n^(This is a response to your comment \"" + msg.body + "\" in r/" + str(msg.subreddit) + ")")
                             except:
                                 pass
-                    else:  # if it was a DM, sens a DM back to the author
-                        r.redditor(str(msg.author)).message(str(misc.sectoMin(start)) + "-" + str(misc.sectoMin(to)) + ": " + video_url, misc.create_response(data, ctx, video_url, start, to) + "\n\n^(This is a response to your PM \"" + msg.body + "\")")
+                    else:  # if it was a DM, send a DM back to the author
+                        r.redditor(str(msg.author)).message(str(misc.sectoMin(start)) + "-" + str(misc.sectoMin(to)), misc.create_response(data, ctx, video_url, start, to) + "\n\n^(This is a response to your PM \"" + msg.body + "\")")
 
                 except Exception as e:
                     msg.reply("Something went wrong, got error **" + type(e).__name__ + "**" + config.Reddit.footer)
