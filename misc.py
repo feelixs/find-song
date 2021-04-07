@@ -5,6 +5,14 @@ import traceback
 output_file = "output.mp4"
 
 
+class NoVideo(Exception):
+    pass
+
+
+class NoTimeStamp(Exception):
+    pass
+
+
 class Spotify:
     def __init__(self):
         import spotipy
@@ -144,6 +152,7 @@ def find_link_youtube_spotify(acr_data, input_time):
         data, url = {'msg': "error", 'type': type(e).__name__}, ""
     if data['msg'] == "success" and str(data['title']).lower() == input_song and str(
             data['artists']).lower() == input_artists:
+        # correct_url = url + "&t=" + str(math.floor(int(acr_data['play_offset']) / 1000) - input_time)  # add timestamp into youtube link, minus the amount of time the bot searched for
         correct_url = url + "&t=" + str(math.floor(int(acr_data['play_offset']) / 1000))
         print(correct_url)
         print("youtube match")
@@ -243,6 +252,11 @@ def timestamptoSec(time_str) -> int:
     """Get Seconds from time."""
     time_str = str(time_str)
     list = time_str.split(':')
+    for item in list:
+        try:
+            inttest = int(item)
+        except:
+            raise NoTimeStamp
     if len(list) == 3:
         h, m, s = list
     elif len(list) == 2:
@@ -316,6 +330,7 @@ def get_yt_link_time(url) -> int:
 
 
 def clear_formatting(string) -> str:
+    print(string)
     word = ""
     if "]" in string:
         skip_text = False
@@ -326,6 +341,7 @@ def clear_formatting(string) -> str:
             skip_text = True
         if letter != "[" and letter != "]" and letter != "(" and letter != ")" and skip_text:
             word += letter
+    print(word)
     return word
 
 
@@ -393,7 +409,3 @@ def download_video(video_url):
         supported = 0
         of = 0
     return supported, of
-
-
-class NoVideo(Exception):
-    pass
