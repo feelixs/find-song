@@ -47,6 +47,7 @@ def mentions_reply():
 
                     start = -1
                     to = -1
+                    skip = False
                     msg_words = str(msg.body).split(" ")  # get timestamp from original msg
                     for word in msg_words:
                         if "-" in word:  # if given start and end (0:30-0:50 or 30-50 formats)
@@ -56,6 +57,10 @@ def mentions_reply():
                                     start = misc.timestamptoSec(word_split[0])
                                 else:  # 30 format (just plain seconds)
                                     start = int(word_split[0])
+                            except misc.NoTimeStamp:
+                                if "u/" + config.Reddit.user not in str(msg.body).lower():
+                                    skip = True
+                                    break
                             except:
                                 pass
                             try:
@@ -63,6 +68,10 @@ def mentions_reply():
                                     to = misc.timestamptoSec(word_split[-1])
                                 else:  # 30 format (just plain seconds)
                                     to = int(word_split[-1])
+                            except misc.NoTimeStamp:
+                                if "u/" + config.Reddit.user not in str(msg.body).lower():
+                                    skip = True
+                                    break
                             except:
                                 pass
                         else:  # else, assume they gave just the starting point
@@ -71,8 +80,16 @@ def mentions_reply():
                                     start = misc.timestamptoSec(word)
                                 else:  # 30 format (just plain seconds)
                                     start = int(word)
+                            except misc.NoTimeStamp:
+                                if "u/" + config.Reddit.user not in str(msg.body).lower():
+                                    skip = True
+                                    break
                             except:
                                 pass
+                    if skip:
+                        print(msg.body, "> no timestamp, skipping")
+                        msg.mark_read()
+                        continue
                     video_url = misc.clear_formatting(video_url)
                     if start == -1:
                         if "https://youtu" in video_url or "https://www.youtu":
@@ -97,9 +114,11 @@ def mentions_reply():
 
                     if msg.was_comment:  # if it was a comment, reply
                         try:
+                            print("replying to", msg.author, "on", msg.submission)
                             msg.reply(misc.create_response(data, ctx, video_url, start, to))
                         except:
                             try:
+                                print("pming", msg.author, "on", msg.submission)
                                 r.redditor(str(msg.author)).message("I couldn't reply to your comment, here's a PM instead", misc.create_response(data, ctx, video_url, start, to) + "\n\n^(This is a response to your comment \"" + msg.body + "\" in r/" + str(msg.subreddit) + ")")
                             except:
                                 pass
@@ -107,10 +126,13 @@ def mentions_reply():
                         r.redditor(str(msg.author)).message(str(misc.sectoMin(start)) + "-" + str(misc.sectoMin(to)), misc.create_response(data, ctx, video_url, start, to) + "\n\n^(This is a response to your PM \"" + msg.body + "\")")
 
                 except Exception as e:
+                    print("inner try statment:", traceback.format_exc())
+                    print(type(e).__name__)
                     msg.reply("Something went wrong, got error **" + type(e).__name__ + "**" + config.Reddit.footer)
+                    print("(error) replied to", msg.author)
                 msg.mark_read()
         except:
-            pass
+            print("first try statment:", traceback.format_exc())
 
 
 def auto_reply():  # auto-reply to comments in r/all
@@ -144,11 +166,13 @@ def auto_reply():  # auto-reply to comments in r/all
                             re = misc.create_response(data, "autoreply", surl, start_sec, start_sec + 30)
                         else:  # if couldn't recognize or confidence < 50, don't reply
                             continue
+                        print(c.subreddit, ">", c.author, ">", c.body)
+                        print(data)
                     else:
                         continue  # if video type isn't supported, don't reply
                     c.reply(re)
         except:
-            pass
+            print(traceback.format_exc())
 
 
 if __name__ == '__main__':
