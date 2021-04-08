@@ -1,7 +1,7 @@
 **find-song: Music recognition for Reddit**
 
 
-Ever seen a Reddit post playing a fire song that you just want to hear more of? 
+Ever seen a Reddit post playing a fire song that you want to hear more of? 
 
 
 Simply mention u/find-song in the comments of a post, and he'll grab the audio playing in the post's link and reply with any detected song.
