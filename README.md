@@ -3,11 +3,8 @@
 
 Ever seen a Reddit post playing a fire song that you just want to hear more of? 
 
-Well, just use the Reddit bot for identifying songs from v.redd.it, twitch.tv, and youtube links: [u/find-song](https://reddit.com/user/find-song)
 
-******
-
-Simply mention him in the comments of a post, and he'll grab the audio playing in the post's link and reply with any detected song.
+Simply mention u/find-song in the comments of a post, and he'll grab the audio playing in the post's link and reply with any detected song.
 
 ![image](/images/findsong1.JPG)
 
