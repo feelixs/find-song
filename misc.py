@@ -13,6 +13,10 @@ class NoTimeStamp(Exception):
     pass
 
 
+class TooManyReqs(Exception):
+    pass
+
+
 class Spotify:
     def __init__(self):
         import spotipy
@@ -146,10 +150,7 @@ def find_link_youtube_spotify(acr_data, input_time):
     input_song = str(acr_data["title"]).lower()
     input_artists = str(acr_data["artists"]).lower()
     chrome = Chrome()
-    try:
-        data, url = chrome.search_download_recognize_youtube_video(input_song, input_artists, input_time)
-    except Exception as e:
-        data, url = {'msg': "error", 'type': type(e).__name__}, ""
+    data, url = chrome.search_download_recognize_youtube_video(input_song, input_artists, input_time)
     if data['msg'] == "success" and str(data['title']).lower() == input_song and str(
             data['artists']).lower() == input_artists:
         # correct_url = url + "&t=" + str(math.floor(int(acr_data['play_offset']) / 1000) - input_time)  # add timestamp into youtube link, minus the amount of time the bot searched for
@@ -201,7 +202,6 @@ def create_response(acr_data, context, user_url, start_sec, end_sec) -> str:
         if context == "autoreply":
             url = find_link_spotify(acr_data, start_sec)
         else:
-            # url = find_link_spotify(acr_data, start_sec)
             try:
                 url = find_link_youtube_spotify(acr_data, start_sec)
             except:
@@ -369,7 +369,10 @@ def download_yt(link):
     """Downloads video from youtube links"""
     import os
     from pytube import YouTube
-    mp4 = YouTube(link)
+    try:
+        mp4 = YouTube(link)
+    except HTTPError:
+        raise TooManyReqs
     mp4.streams.filter(file_extension="mp4")
     of = mp4.streams.get_by_itag(18).download()
     return of
