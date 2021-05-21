@@ -86,8 +86,7 @@ def mentions_reply():
                                     break
                             except:
                                 pass
-                    if skip:
-                        print(msg.body, "> no timestamp, skipping")
+                    if skip:  # if no timestamp was found in the msg
                         msg.mark_read()
                         continue
                     video_url = misc.clear_formatting(video_url)
@@ -104,7 +103,12 @@ def mentions_reply():
                     elif "twitch.tv" in video_url:
                         output_file = misc.download_twitchclip(video_url)
                     elif "https://youtu" in video_url or "https://www.youtu" in video_url:
-                        output_file = misc.download_yt(video_url)
+                        try:
+                            output_file = misc.download_yt(video_url)
+                        except misc.TooManyReqs:  # if received ratelimit for downloading youtube videos
+                            reqs.append([video_url, msg, time.time(), start, to, ctx, 0])  # if youtube gives too many reqs error, store videos and context for future reply
+                            msg.mark_read()
+                            continue
                     else:
                         try:
                             output_file = misc.download_reddit(video_url)
@@ -118,21 +122,51 @@ def mentions_reply():
                             msg.reply(misc.create_response(data, ctx, video_url, start, to))
                         except:
                             try:
-                                print("pming", msg.author, "on", msg.submission)
-                                r.redditor(str(msg.author)).message("I couldn't reply to your comment, here's a PM instead", misc.create_response(data, ctx, video_url, start, to) + "\n\n^(This is a response to your comment \"" + msg.body + "\" in r/" + str(msg.subreddit) + ")")
+                                if data['msg'] != "error":
+                                    print("pming", msg.author, "on", msg.submission)
+                                    r.redditor(str(msg.author)).message("I couldn't reply to your comment, here's a PM instead", misc.create_response(data, ctx, video_url, start, to) + "\n\n^(This is a response to your comment \"" + msg.body + "\" in r/" + str(msg.subreddit) + ")")
                             except:
                                 pass
                     else:  # if it was a DM, send a DM back to the author
                         r.redditor(str(msg.author)).message(str(misc.sectoMin(start)) + "-" + str(misc.sectoMin(to)), misc.create_response(data, ctx, video_url, start, to) + "\n\n^(This is a response to your PM \"" + msg.body + "\")")
 
                 except Exception as e:
-                    print("inner try statment:", traceback.format_exc())
-                    print(type(e).__name__)
                     msg.reply("Something went wrong, got error **" + type(e).__name__ + "**" + config.Reddit.footer)
-                    print("(error) replied to", msg.author)
                 msg.mark_read()
         except:
-            print("first try statment:", traceback.format_exc())
+            pass
+
+        try:
+            for context in reqs:
+                if time.time() - context[2] > 1800:  # for each ratelimited msg, wait 30 minutes to try again
+                    video_url = context[0]
+                    msg = context[1]
+                    try:
+                        output_file = misc.download_yt(video_url)
+                    except misc.TooManyReqs:
+                        context[6] += 1
+                        print("req list:", msg.author, "youtube ratelimit, waiting 30min (tries:", str(context[6]) + ")")
+                        context[2] = time.time()
+                        continue
+                    start, to, ctx = context[3], context[4], context[5]
+                    data = misc.identify_audio(output_file, start, to)
+                    print(data)
+                    if msg.was_comment:
+                        try:
+                            print("req: replying to", msg.author, "on", msg.submission)
+                            msg.reply(misc.create_response(data, ctx, video_url, start, to))
+                        except:
+                            try:
+                                print("pming", msg.author, "on", msg.submission)
+                                r.redditor(str(msg.author)).message(
+                                    "I got ratelimited by Youtube, but better late than never",
+                                    misc.create_response(data, ctx, video_url, start, to) + "\n\n^(This is a response to your comment \"" + msg.body + "\" in r/" + str(msg.subreddit) + ")")
+                            except:
+                                pass
+                    else:
+                        r.redditor(str(msg.author)).message(str(misc.sectoMin(start)) + "-" + str(misc.sectoMin(to)), misc.create_response(data, ctx, video_url, start, to) + "\n\n^(This is a response to your PM \"" + msg.body + "\")\nSorry for the late reply - I got ratelimited by Youtube trying to recognize the audio")
+        except:
+            pass
 
 
 def auto_reply():  # auto-reply to comments in r/all
@@ -166,13 +200,11 @@ def auto_reply():  # auto-reply to comments in r/all
                             re = misc.create_response(data, "autoreply", surl, start_sec, start_sec + 30)
                         else:  # if couldn't recognize or confidence < 50, don't reply
                             continue
-                        print(c.subreddit, ">", c.author, ">", c.body)
-                        print(data)
                     else:
                         continue  # if video type isn't supported, don't reply
                     c.reply(re)
         except:
-            print(traceback.format_exc())
+            pass
 
 
 if __name__ == '__main__':
