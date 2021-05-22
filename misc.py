@@ -371,9 +371,9 @@ def download_yt(link):
     from pytube import YouTube
     try:
         mp4 = YouTube(link)
+        mp4.streams.filter(file_extension="mp4")
     except HTTPError:
         raise TooManyReqs
-    mp4.streams.filter(file_extension="mp4")
     of = mp4.streams.get_by_itag(18).download()
     return of
 
