@@ -55,11 +55,9 @@ There's also another bot that came after u/find-song which works similarly, u/Re
 
 >**Where does it get its links?**
 
-Before replying with the song information, find-song will do a quick google search using selenium and the song title & artists. If it finds a youtube video, it does an ACRCloud request on that video to see if its audio matches that of the first request - if it does, it includes the video in its reply.
+Before replying with the song information, find-song will do a search on the Spotify API to find exact matches of the song name & artists from the ACRCloud request.
 
-If the youtube search didn't yield any results or didn't match, it searches the Spotify API to find exact matches of the song name & artists from the ACRCloud request.
-
-If none of those work, find-song defaults to constructing a link using ACRCloud's database website, aha-music.com.
+If the spotify search doesn't work, find-song defaults to constructing a link using ACRCloud's database website, aha-music.com.
 
 <br />
 
