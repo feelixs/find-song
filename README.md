@@ -1,3 +1,5 @@
+*the find-song bot is currently offline*
+
 **find-song: Music recognition for Reddit**
 
 
