@@ -1,12 +1,7 @@
-*the find-song bot is currently offline*
-
 **find-song: Music recognition for Reddit**
 
 
-Ever seen a Reddit post playing a fire song that you want to hear more of? 
-
-
-Simply mention u/find-song in the comments of a post, and he'll grab the audio playing in the post's link and reply with any detected song.
+Mention u/find-song in the comments of a post to find the song playing in it.
 
 ![image](/images/findsong1.JPG)
 
@@ -20,8 +15,6 @@ Simply mention u/find-song in the comments of a post, and he'll grab the audio p
 
 You can give find-song a timestamp if you want him to search at a specific point in the video.
 
-find-song auto-parses youtube links that are timestamped, so if there's a "&t=" in the link he'll start the search at the youtube timestamp.
-
 ![image](/images/findsong2.JPG)
 
 
@@ -29,6 +22,8 @@ find-song auto-parses youtube links that are timestamped, so if there's a "&t=" 
 <br />
 
 It's also possible to directly supply find-song a link to sample - doing so will override the submission link:
+
+
 
 ![image](/images/findsong3.JPG)
 
@@ -70,3 +65,7 @@ If the spotify search doesn't work, find-song defaults to constructing a link us
 If you have any suggestions, comments, or questions you can contact me via GitHub or [Reddit](https://www.reddit.com/message/compose?to=Fhyke&subject=contact%20about%20find-song)
 
 Thanks for reading & have fun with the bot!
+
+******
+
+[Donate](https://ko-fi.com/findsong)

@@ -1,8 +1,41 @@
+from httpx import HTTPError
+from selenium import webdriver
+from selenium.webdriver.common.by import By
 import config
 import praw
 import traceback
+import time
+import youtube_dl
+import subprocess
+from acrcloud.recognizer import ACRCloudRecognizer
+import json
+import os
+import spotipy
+from spotipy.oauth2 import SpotifyClientCredentials
+from pytube import YouTube
+import math
+import requests
+import urllib.request
+
 
 output_file = "output.mp4"
+cf = config.Reddit.main
+
+
+class NoValidKey(Exception):
+    pass
+
+
+class TooManyACRReqs(Exception):
+    pass
+
+
+class NoKeyProvided(Exception):
+    pass
+
+
+class NoRateHandler(Exception):
+    pass
 
 
 class NoVideo(Exception):
@@ -19,41 +52,41 @@ class TooManyReqs(Exception):
 
 class Spotify:
     def __init__(self):
-        import spotipy
-        from spotipy.oauth2 import SpotifyClientCredentials
         self.scope = "user-library-read"
-        self.client = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials())
+        self.client = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials(client_id= config.Spotify.id, client_secret=config.Spotify.sec))
 
 
 class Chrome:
-    def start_driver(self):
-        from selenium import webdriver
+    def __int__(self):
         self.options = webdriver.ChromeOptions()
         self.options.add_argument("--mute-audio")
         # self.options.add_argument("--no-startup-window")
-        self.driver = webdriver.Chrome("C:\\Users\mmh\Downloads\chromedriver_win32\chromedriver.exe", chrome_options=self.options)
+        self.driver = webdriver.Chrome(config.webdriver,
+                                       chrome_options=self.options)
+
+    def start_driver(self):
+        pass
 
     def click_on_location(self, x, y):
         from selenium.webdriver.common.action_chains import ActionChains
-        elem = self.driver.find_element_by_xpath('/html')
+        elem = self.driver.find_element(By.XPATH, '/html')
         AC = ActionChains(self.driver)
         AC.move_to_element(elem).move_by_offset(x, y).click().perform()
 
     def search_download_recognize_youtube_video(self, song, artist, input_time):
-        import time
         try:
             self.start_driver()
             self.driver.get('https://google.com/search?q=' + str(song) + ' by ' + str(artist) + ' youtube')
             i = 0
             while i == 20 or i == -1:
                 try:
-                    self.driver.find_element_by_xpath('/html/body/div[8]/div/div[8]/div/div[2]/div[3]/div[1]').click()
+                    self.driver.find_element(By.XPATH, '/html/body/div[8]/div/div[8]/div/div[2]/div[3]/div[1]').click()
                     i = -1
                 except:
                     pass
                 i += 1
             try:
-                elem = self.driver.find_element_by_link_text("Search for English results only")
+                elem = self.driver.find_element(By.LINK_TEXT, "Search for English results only")
                 self.click_on_location(-200, -215)
             except:
                 self.click_on_location(-200, -250)
@@ -63,26 +96,43 @@ class Chrome:
             return identify_audio(yt_file, input_time), url
         except Exception as e:
             self.driver.quit()
-            print(traceback.format_exc())
             raise e
 
 
 def authenticate():
-    login = praw.Reddit(username=config.Reddit.user, password=config.Reddit.psw, user_agent=config.Reddit.agent, client_id=config.Reddit.client_id, client_secret=config.Reddit.client_secret)
+    login = praw.Reddit(username=cf.user, password=cf.psw, user_agent=cf.agent, client_id=cf.client_id, client_secret=cf.client_secret)
+    print(f"Logged in as {cf.user}")
     return login
 
 
-def identify_audio(file=None, start_sec=0, end_sec=None):
+def is_key_allowed(acr_keyname, ratehandler):
+    if ratehandler.has_day_passed(time.time()):
+        ratehandler.reset_key_reqs()
+    if ratehandler.add_req_to_key(acr_keyname, 0) > 100:
+        raise TooManyACRReqs
+    return 1
+
+
+def identify_audio(file=None, start_sec=0, end_sec=None, acr=None, delfile=False, ratehandler=None):
     """Requests data from ACRCloud and re-formats for manageability"""
-    from acrcloud.recognizer import ACRCloudRecognizer
-    import json
-    import os
+    if ratehandler is None:
+        raise NoRateHandler
     if end_sec is None:
         end_sec = start_sec + 30
+    usedkey = None
+    for key in ratehandler.KEYS:
+        if is_key_allowed(key["key"], ratehandler):
+            usedkey = key
+            acr_key = key["key"]
+            acr_secret = key["secret"]
+            acr_host = key["host"]
+            break
+    if usedkey is None:
+        raise NoValidKey
     login = {
-        "access_key": config.ACR.key,
-        "access_secret": config.ACR.secret,
-        "host": "identify-us-west-2.acrcloud.com"
+        "access_key": acr_key,
+        "access_secret": acr_secret,
+        "host": acr_host
     }
     acr = ACRCloudRecognizer(login)
     try:
@@ -92,14 +142,15 @@ def identify_audio(file=None, start_sec=0, end_sec=None):
 
     try:
         data = json.loads(acr.recognize_by_file(file, start_sec, sample_length))
-        os.remove(file)  # delete the file since we don't need it anymore
+        if delfile:
+            os.remove(file)  # delete the file since we don't need it anymore
     except:
         pass
     try:
         title, artists, score, duration, play_offset, acr_id = data["metadata"]["music"][0]["title"], data['metadata']['music'][0]['artists'][0]['name'], \
                                                                data['metadata']['music'][0]['score'], data["metadata"]["music"][0]["duration_ms"], \
                                                                data["metadata"]["music"][0]["play_offset_ms"], data["metadata"]["music"][0]["acrid"]
-
+        ratehandler.add_req_to_key(acr_key)
         return {"msg": "success", "title": title, "artists": artists, "score": score, "play_offset": play_offset, "duration": duration, "acr_id": acr_id}
     except:
         return {"msg": "error", "score": 0}
@@ -145,7 +196,6 @@ def find_link_youtube_spotify(acr_data, input_time):
     """Search spotify for song,
      if that fails then google the youtube video.
      Output link if either is successful"""
-    import math
     correct_url = None
     input_song = str(acr_data["title"]).lower()
     input_artists = str(acr_data["artists"]).lower()
@@ -155,8 +205,6 @@ def find_link_youtube_spotify(acr_data, input_time):
             data['artists']).lower() == input_artists:
         # correct_url = url + "&t=" + str(math.floor(int(acr_data['play_offset']) / 1000) - input_time)  # add timestamp into youtube link, minus the amount of time the bot searched for
         correct_url = url + "&t=" + str(math.floor(int(acr_data['play_offset']) / 1000))
-        print(correct_url)
-        print("youtube match")
     if correct_url is None:
         spotify = Spotify()
         results = spotify.client.search(q='track:' + str(input_song))['tracks']['items']
@@ -166,7 +214,6 @@ def find_link_youtube_spotify(acr_data, input_time):
             url = str(r['external_urls']['spotify'])
             if name.lower() == input_song and artist.lower() == input_artists:
                 correct_url = url
-                print("spotify match")
                 break
     if correct_url is None:
         correct_url = acr_create_link(str(acr_data["title"]), str(acr_data["artists"]), str(acr_data['acr_id']))
@@ -186,7 +233,6 @@ def find_link_spotify(acr_data, input_time):
         url = str(r['external_urls']['spotify'])
         if name.lower() == input_song and artist.lower() == input_artists:
             correct_url = url
-            print("spotify match")
             break
     if correct_url is None:
         correct_url = acr_create_link(str(acr_data["title"]), str(acr_data["artists"]), str(acr_data['acr_id']))
@@ -216,22 +262,21 @@ def create_response(acr_data, context, user_url, start_sec, end_sec) -> str:
         response = "No song was found"
     start_sec, end_sec = sectoMin(start_sec), sectoMin(end_sec)
     if context == "link_parent":
-        response += "\n\n*Looks like you wanted the song from your parent comment's [link](" + user_url + "). I searched from " + str(start_sec) + "-" + str(end_sec) + "*"
+        response += "\n\n*Looks like you wanted the song from your parent comment's [link](" + user_url + "). I searched from " + str(start_sec) + "-" + str(end_sec) + "*.\n\n*You can provide a timestamp to search somewhere else.*"
     elif context == "link_comment":
-        response += "\n\n*Looks like you gave me a [a link](" + user_url + ") to watch. I searched from " + str(start_sec) + "-" + str(end_sec) + "*"
+        response += "\n\n*Looks like you gave me a [a link](" + user_url + ") to watch. I searched from " + str(start_sec) + "-" + str(end_sec) + "*.\n\n*You can provide a timestamp to search somewhere else.*"
     elif context == "selftxt_link":
-        response += "\n\n*Looks like you wanted the song from [a link](" + user_url + ") in the submission. I searched from " + str(start_sec) + "-" + str(end_sec) + "*"
+        response += "\n\n*Looks like you wanted the song from [a link](" + user_url + ") in the submission. I searched from " + str(start_sec) + "-" + str(end_sec) + "*.\n\n*You can provide a timestamp to search somewhere else.*"
     elif context == "video_submission":
-        response += "\n\n*Looks like you wanted the song from [here](" + user_url + "). I searched from " + str(start_sec) + "-" + str(end_sec) + "*"
+        response += "\n\n*Looks like you wanted the song from [here](" + user_url + "). I searched from " + str(start_sec) + "-" + str(end_sec) + "*.\n\n*You can provide a timestamp to search somewhere else.*"
     else:
         response += "\n\n*I am a bot, and this action was performed automatically*"
 
-    return response + config.Reddit.footer
+    return response + cf.footer
 
 
 def sectoMin(secs) -> str:
     """Convert seconds to 0:00 format"""
-    import time
     secs = int(secs)
     if secs >= 3600:
         return time.strftime("%H:%M:%S", time.gmtime(secs))
@@ -241,7 +286,6 @@ def sectoMin(secs) -> str:
 
 def mstoMin(ms) -> str:
     """Convert milliseconds to 0:00 format"""
-    import time
     if ms >= 3600000:
         return time.strftime("%H:%M:%S", time.gmtime(ms / 1000))
     else:
@@ -330,7 +374,6 @@ def get_yt_link_time(url) -> int:
 
 
 def clear_formatting(string) -> str:
-    print(string)
     word = ""
     if "]" in string:
         skip_text = False
@@ -341,7 +384,6 @@ def clear_formatting(string) -> str:
             skip_text = True
         if letter != "[" and letter != "]" and letter != "(" and letter != ")" and skip_text:
             word += letter
-    print(word)
     return word
 
 
@@ -356,7 +398,6 @@ def take_off_extra_chars(string):
 
 def download_reddit(link, file=output_file):
     """Pulls & downloads audio from reddit post"""
-    import requests
     mp4 = requests.get(link)
     with open(file, 'wb') as f:
         for chunk in mp4.iter_content(chunk_size=255):
@@ -367,21 +408,36 @@ def download_reddit(link, file=output_file):
 
 def download_yt(link):
     """Downloads video from youtube links"""
-    import os
-    from pytube import YouTube
     try:
-        mp4 = YouTube(link)
-        mp4.streams.filter(file_extension="mp4")
+        of = YouTube(link).streams.filter(file_extension="mp4").first().download()
     except HTTPError:
         raise TooManyReqs
-    of = mp4.streams.get_by_itag(18).download()
     return of
+
+
+def download_part_yt(link, start, to):
+    """:param start 00:00:15
+    :param to 00:00:25"""
+    if start is None:
+        start = "00:00:00"
+    if to is None:
+        to = "00:00:30"
+    URL = link
+    FROM = start
+    TO = to
+    TARGET = "demo.mp4"
+
+    with youtube_dl.YoutubeDL({'format': 'best'}) as ydl:
+        result = ydl.extract_info(URL, download=False)
+        video = result['entries'][0] if 'entries' in result else result
+
+    url = video['url']
+    subprocess.call('ffmpeg -i "%s" -ss %s -t %s -c:v copy -c:a copy -y "%s"' % (url, FROM, TO, TARGET))
+    return TARGET
 
 
 def download_twitchclip(url, output_path=output_file):
     """Download twitch clips"""
-    import requests
-    import urllib.request
     aut_params = {'client_id': config.Twitch.client_id, 'client_secret': config.Twitch.client_secret, 'grant_type': 'client_credentials'}
     data = requests.post(url='https://id.twitch.tv/oauth2/token', params=aut_params).json()
     token = data["access_token"]
@@ -396,7 +452,7 @@ def download_twitchclip(url, output_path=output_file):
     return output_path
 
 
-def download_video(video_url):
+def download_video(video_url, start=None, to=None):
     video_url = str(video_url)
     supported = 1
     if 'v.redd.it' in video_url:  # for videos uploaded to reddit
@@ -404,7 +460,7 @@ def download_video(video_url):
         of = download_reddit(url)
     elif 'youtu.be' in video_url or 'youtube' in video_url:  # for youtube links
         url = video_url
-        of = download_yt(url)
+        of = download_part_yt(url, start, to)
     elif 'twitch.tv' in video_url:  # for twitch links
         url = video_url
         of = download_twitchclip(url)
