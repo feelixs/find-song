@@ -436,6 +436,28 @@ def download_part_yt(link, start, to):
     return TARGET
 
 
+def parse_tiktok_link(link: str) -> int:
+    vidid = None
+    # https://www.tiktok.com/@2girls1bottl3/video/7144007425803209990?is_from_webapp=1&sender_device=pc
+    try:
+        vidid = link.split("/")[5]
+    except:
+        raise InvalidTikLink
+    try:
+        # if there's a ? after the id
+        vidid = vidid.split("?")[0]
+    except:
+        pass
+    return int(vidid)
+
+
+def download_tiktok(link, save_as="tikoutput"):
+    verifyFp = "verify_lb80pwfe_7F1VlUHx_XpMH_4H1f_8CYC_HoIYynnXj4Qx"
+    videoid = parse_tiktok_link(link)
+    TikTokAPI().downloadVideoById(videoid, fr"C:\Users\Michael Felix\Documents\GitHub\reddit-song-bot\find-song\{save_as}.mp4")
+    return save_as
+
+
 def download_twitchclip(url, output_path=output_file):
     """Download twitch clips"""
     aut_params = {'client_id': config.Twitch.client_id, 'client_secret': config.Twitch.client_secret, 'grant_type': 'client_credentials'}

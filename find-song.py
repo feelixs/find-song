@@ -40,7 +40,7 @@ class Bot:
                                 if str(msg.parent().author) != self.acc_info.user and "https://" in str(msg.parent().body):  # if there's no parent comment it will error out into the except statement
                                     words = str(msg.body).replace("\n", " ").replace(",", " ").split(" ")
                                     for word in words:
-                                        if ("youtu" in video_url and "https://" in video_url) or "twitch.tv" in word or "v.redd.it" in word:  # make sure the parent has a compatible link
+                                        if ("youtu" in video_url and "https://" in video_url) or "twitch.tv" in word or "v.redd.it" in word  or "tiktok.com" in word:  # make sure the parent has a compatible link
                                             ctx, video_url = "link_parent", word
                                             break
                                 else:
@@ -126,6 +126,8 @@ class Bot:
                             output_file = misc.download_reddit(video_url + "/DASH_audio.mp4")
                         elif "twitch.tv" in video_url:
                             output_file = misc.download_twitchclip(video_url)
+                        elif "tiktok" in video_url:
+                            output_file = misc.download_tiktok(video_url)
                         elif "youtu" in video_url and "https://" in video_url:
                             try:
                                 output_file = misc.download_yt(video_url)
