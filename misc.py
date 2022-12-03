@@ -423,7 +423,7 @@ def download_yt(link):
     """Downloads video from youtube links"""
     try:
         # overwrites files with same name
-        of = YouTube(link).streams.filter(file_extension="mp4").first().download(skip_existing=False)
+        of = YouTube(link).streams.filter(file_extension="mp4").first().download(filename=slugify(link)+".mp4")
     except HTTPError:
         raise TooManyReqs
     return of
