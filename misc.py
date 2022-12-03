@@ -14,12 +14,23 @@ import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 from pytube import YouTube
 import math
+import re
+from TikTokAPI import TikTokAPI
+import unicodedata
 import requests
 import urllib.request
 
 
 output_file = "output.mp4"
 cf = config.Reddit.main
+
+
+class NoContext(Exception):
+    pass
+
+
+class InvalidTikLink(Exception):
+    pass
 
 
 class NoValidKey(Exception):
@@ -96,6 +107,7 @@ class Chrome:
             return identify_audio(yt_file, input_time), url
         except Exception as e:
             self.driver.quit()
+            print(traceback.format_exc())
             raise e
 
 
@@ -151,6 +163,7 @@ def identify_audio(file=None, start_sec=0, end_sec=None, acr=None, delfile=False
                                                                data['metadata']['music'][0]['score'], data["metadata"]["music"][0]["duration_ms"], \
                                                                data["metadata"]["music"][0]["play_offset_ms"], data["metadata"]["music"][0]["acrid"]
         ratehandler.add_req_to_key(acr_key)
+        print(usedkey["name"], usedkey["reqs"])
         return {"msg": "success", "title": title, "artists": artists, "score": score, "play_offset": play_offset, "duration": duration, "acr_id": acr_id}
     except:
         return {"msg": "error", "score": 0}
@@ -205,6 +218,8 @@ def find_link_youtube_spotify(acr_data, input_time):
             data['artists']).lower() == input_artists:
         # correct_url = url + "&t=" + str(math.floor(int(acr_data['play_offset']) / 1000) - input_time)  # add timestamp into youtube link, minus the amount of time the bot searched for
         correct_url = url + "&t=" + str(math.floor(int(acr_data['play_offset']) / 1000))
+        print(correct_url)
+        print("youtube match")
     if correct_url is None:
         spotify = Spotify()
         results = spotify.client.search(q='track:' + str(input_song))['tracks']['items']
@@ -214,6 +229,7 @@ def find_link_youtube_spotify(acr_data, input_time):
             url = str(r['external_urls']['spotify'])
             if name.lower() == input_song and artist.lower() == input_artists:
                 correct_url = url
+                print("spotify match")
                 break
     if correct_url is None:
         correct_url = acr_create_link(str(acr_data["title"]), str(acr_data["artists"]), str(acr_data['acr_id']))
@@ -233,6 +249,7 @@ def find_link_spotify(acr_data, input_time):
         url = str(r['external_urls']['spotify'])
         if name.lower() == input_song and artist.lower() == input_artists:
             correct_url = url
+            print("spotify match")
             break
     if correct_url is None:
         correct_url = acr_create_link(str(acr_data["title"]), str(acr_data["artists"]), str(acr_data['acr_id']))
@@ -398,7 +415,10 @@ def take_off_extra_chars(string):
 
 def download_reddit(link, file=output_file):
     """Pulls & downloads audio from reddit post"""
+    if "/DASH_audio.mp4" not in link:
+        link = link + "/DASH_audio.mp4"
     mp4 = requests.get(link)
+    file = slugify(link) + ".mp4"
     with open(file, 'wb') as f:
         for chunk in mp4.iter_content(chunk_size=255):
             if chunk:
@@ -409,7 +429,8 @@ def download_reddit(link, file=output_file):
 def download_yt(link):
     """Downloads video from youtube links"""
     try:
-        of = YouTube(link).streams.filter(file_extension="mp4").first().download()
+        # overwrites files with same name
+        of = YouTube(link).streams.filter(file_extension="mp4").first().download(skip_existing=False)
     except HTTPError:
         raise TooManyReqs
     return of
@@ -436,9 +457,13 @@ def download_part_yt(link, start, to):
     return TARGET
 
 
+def download_soundcloud(link=None, save_as="output"):
+    pass
+
+
 def parse_tiktok_link(link: str) -> int:
+    """when given a tiktok link, returns its ID"""
     vidid = None
-    # https://www.tiktok.com/@2girls1bottl3/video/7144007425803209990?is_from_webapp=1&sender_device=pc
     try:
         vidid = link.split("/")[5]
     except:
@@ -451,11 +476,40 @@ def parse_tiktok_link(link: str) -> int:
     return int(vidid)
 
 
-def download_tiktok(link, save_as="tikoutput"):
-    verifyFp = "verify_lb80pwfe_7F1VlUHx_XpMH_4H1f_8CYC_HoIYynnXj4Qx"
+def slugify(value, allow_unicode=False):
+    """
+    Taken from https://github.com/django/django/blob/master/django/utils/text.py
+    Convert to ASCII if 'allow_unicode' is False. Convert spaces or repeated
+    dashes to single dashes. Remove characters that aren't alphanumerics,
+    underscores, or hyphens. Convert to lowercase. Also strip leading and
+    trailing whitespace, dashes, and underscores.
+    """
+    value = str(value)
+    if allow_unicode:
+        value = unicodedata.normalize('NFKC', value)
+    else:
+        value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore').decode('ascii')
+    value = re.sub(r'[^\w\s-]', '', value.lower())
+    return re.sub(r'[-\s]+', '-', value).strip('-_')
+
+
+def create_valid_file(filaname):
+    fileexists = True
+    fname, ext = filaname.split(".")[0], "." + filaname.split(".")[1]
+    use_fname = fname
+    e = 0
+    while fileexists:
+        e += 1
+        use_fname = fname + f"-{e}"
+        use_fname = slugify(use_fname)
+        fileexists = os.path.isfile(f"{use_fname}{ext}")
+    return use_fname + ext
+
+
+def download_tiktok(link):
     videoid = parse_tiktok_link(link)
-    TikTokAPI().downloadVideoById(videoid, fr"C:\Users\Michael Felix\Documents\GitHub\reddit-song-bot\find-song\{save_as}.mp4")
-    return save_as
+    save_as = str(videoid)
+    return TikTokAPI().downloadVideoById(videoid, f"{save_as}.mp4")  # you need to edit TTAPI.downloadVid to return save_path for this to work
 
 
 def download_twitchclip(url, output_path=output_file):
@@ -470,6 +524,7 @@ def download_twitchclip(url, output_path=output_file):
     clip_info = requests.get("https://api.twitch.tv/helix/clips?id=" + slug, headers=h).json()
     thumb_url = clip_info['data'][0]['thumbnail_url']
     mp4_url = thumb_url.split("-preview", 1)[0] + ".mp4"
+    output_path = url.split("/")[-1] + ".mp4"
     urllib.request.urlretrieve(mp4_url, output_path)
     return output_path
 
