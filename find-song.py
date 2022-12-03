@@ -21,7 +21,7 @@ class Bot:
         if msg.was_comment:
             try:
                 # check for parent comment, if it has a link it'll override the submission audio
-                if str(msg.parent().author) != self.acc_info.user and "https://" in str(msg.parent().body):
+                if "https://" in str(msg.parent().body):
                     # if there's no parent comment this will error out of the try statement
                     words = str(msg.parent().body).replace("\n", " ").replace(",", " ").split(" ")
                     for word in words:
