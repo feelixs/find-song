@@ -214,54 +214,6 @@ class Bot:
             except:
                 pass
 
-    def auto_reply(self):  # auto-reply to comments in r/all
-        replied = []
-        while True:
-            try:
-                s = self.auth.subreddit('all').comments()
-                for c in s:
-                    if c.id in replied or c.subreddit == "NameThatSong":
-                        continue
-                    replied.append(c.id)
-                    if len(replied) > 10:
-                        # keep a list of 10 comments already responded to just in case it goes over the same comment
-                        # twice (very unlikely with the amount of comments being left on r/all)
-                        replied.pop(0)
-                    b_txt = str(c.body).lower()
-                    if "u/find-song" in b_txt:
-                        # if a comment has capitalized the U in u/find-song the bot won't be notified in its inbox
-                        # so this manually checks r/all
-                        # (this used to be for checking for "what's this song" comments and replying to them but the bot doesn't do that anymore)
-                        surl = c.submission.url
-                        supported, output_file = misc.download_video(surl)
-                        try:
-                            start_sec = misc.get_yt_link_time(surl)
-                        except:
-                            start_sec = 0
-                        if supported == 1:
-                            try:
-                                data = misc.identify_audio(file=output_file, start_sec=start_sec, ratehandler=self.rh)
-                            except misc.NoValidKey:
-                                print("no valid keys left!")
-                                continue
-                            self.queue_del_file(output_file, 600)
-                            re = misc.create_response(data, "autoreply", surl, start_sec, start_sec + 30)
-                        else:
-                            continue  # if video type isn't supported, don't reply
-
-                        if data['msg'] == "error":
-                            self.auth.redditor(str(c.author)).message("No song found", re + "\n\n^(This is a response to your comment \"" + c.body + "\" in r/" + str(c.subreddit) + ")")
-                        else:
-                            try:
-                                c.reply(re)
-                            except:
-                                try:
-                                    self.auth.redditor(str(c.author)).message("I couldn't reply to your comment, here's a PM instead", re + "\n\n^(This is a response to your comment \"" + c.body + "\" in r/" + str(c.subreddit) + ")")
-                                except:
-                                    pass
-            except:
-                pass
-
     def queue_del_file(self, filepath: str, how_long_to_wait: int):
         self.files_to_del.append([filepath, time.time() + how_long_to_wait])
 
@@ -271,4 +223,3 @@ if __name__ == '__main__':
     bot = Bot(account=misc.cf, reddit_auth=misc.authenticate(), ratehandler=rate)
     with concurrent.futures.ProcessPoolExecutor() as proc:
         mentions_proc = proc.submit(bot.mentions_reply)
-        auto_proc = proc.submit(bot.auto_reply)
