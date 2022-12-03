@@ -163,7 +163,6 @@ def identify_audio(file=None, start_sec=0, end_sec=None, acr=None, delfile=False
                                                                data['metadata']['music'][0]['score'], data["metadata"]["music"][0]["duration_ms"], \
                                                                data["metadata"]["music"][0]["play_offset_ms"], data["metadata"]["music"][0]["acrid"]
         ratehandler.add_req_to_key(acr_key)
-        print(usedkey["name"], usedkey["reqs"])
         return {"msg": "success", "title": title, "artists": artists, "score": score, "play_offset": play_offset, "duration": duration, "acr_id": acr_id}
     except:
         return {"msg": "error", "score": 0}
@@ -214,12 +213,8 @@ def find_link_youtube_spotify(acr_data, input_time):
     input_artists = str(acr_data["artists"]).lower()
     chrome = Chrome()
     data, url = chrome.search_download_recognize_youtube_video(input_song, input_artists, input_time)
-    if data['msg'] == "success" and str(data['title']).lower() == input_song and str(
-            data['artists']).lower() == input_artists:
-        # correct_url = url + "&t=" + str(math.floor(int(acr_data['play_offset']) / 1000) - input_time)  # add timestamp into youtube link, minus the amount of time the bot searched for
+    if data['msg'] == "success" and str(data['title']).lower() == input_song and str(data['artists']).lower() == input_artists:
         correct_url = url + "&t=" + str(math.floor(int(acr_data['play_offset']) / 1000))
-        print(correct_url)
-        print("youtube match")
     if correct_url is None:
         spotify = Spotify()
         results = spotify.client.search(q='track:' + str(input_song))['tracks']['items']
@@ -229,7 +224,6 @@ def find_link_youtube_spotify(acr_data, input_time):
             url = str(r['external_urls']['spotify'])
             if name.lower() == input_song and artist.lower() == input_artists:
                 correct_url = url
-                print("spotify match")
                 break
     if correct_url is None:
         correct_url = acr_create_link(str(acr_data["title"]), str(acr_data["artists"]), str(acr_data['acr_id']))
@@ -249,7 +243,6 @@ def find_link_spotify(acr_data, input_time):
         url = str(r['external_urls']['spotify'])
         if name.lower() == input_song and artist.lower() == input_artists:
             correct_url = url
-            print("spotify match")
             break
     if correct_url is None:
         correct_url = acr_create_link(str(acr_data["title"]), str(acr_data["artists"]), str(acr_data['acr_id']))
@@ -436,28 +429,8 @@ def download_yt(link):
     return of
 
 
-def download_part_yt(link, start, to):
-    """:param start 00:00:15
-    :param to 00:00:25"""
-    if start is None:
-        start = "00:00:00"
-    if to is None:
-        to = "00:00:30"
-    URL = link
-    FROM = start
-    TO = to
-    TARGET = "demo.mp4"
-
-    with youtube_dl.YoutubeDL({'format': 'best'}) as ydl:
-        result = ydl.extract_info(URL, download=False)
-        video = result['entries'][0] if 'entries' in result else result
-
-    url = video['url']
-    subprocess.call('ffmpeg -i "%s" -ss %s -t %s -c:v copy -c:a copy -y "%s"' % (url, FROM, TO, TARGET))
-    return TARGET
-
-
 def download_soundcloud(link=None, save_as="output"):
+    """soundcloud not supported yet"""
     pass
 
 
@@ -537,7 +510,7 @@ def download_video(video_url, start=None, to=None):
         of = download_reddit(url)
     elif 'youtu.be' in video_url or 'youtube' in video_url:  # for youtube links
         url = video_url
-        of = download_part_yt(url, start, to)
+        of = download_yt(url)
     elif 'twitch.tv' in video_url:  # for twitch links
         url = video_url
         of = download_twitchclip(url)
