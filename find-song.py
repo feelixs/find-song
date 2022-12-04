@@ -18,11 +18,13 @@ class Bot:
 
     def handle_context(self, msg):
         ctx, video_url = None, None
-        if msg.was_comment:
+        if msg.was_comment and ("u/" + self.acc_info.user in str(msg.body).lower() or misc.is_single_timestamp(msg)):
+            # the bot should only reply to username mentions, or responses to his own comments that are ONLY timestamps
             try:
                 # check for parent comment, if it has a link it'll override the submission audio
-                if "https://" in str(msg.parent().body):
+                if "https://" in str(msg.parent().body) and "https://" not in str(msg.body):
                     # if there's no parent comment this will error out of the try statement
+                    # and the message doesn't have a link (links in msg.body should override parent comments)
                     words = str(msg.parent().body).replace("\n", " ").replace(",", " ").split(" ")
                     for word in words:
                         if ("youtu" in word and "https://" in word) or "twitch.tv" in word or "v.redd.it" in word or "tiktok.com" in word:  # make sure the parent has a compatible link
@@ -36,23 +38,18 @@ class Bot:
                         if "https://" in word:
                             ctx, video_url = "link_comment", word
                             break
-                elif "https://" in str(msg.submission.selftext) and (("u/" + self.acc_info.user) in msg.body or ":" in msg.body):
+                elif "https://" in str(msg.submission.selftext):
                     # else, assume they want the submission audio, or video from submission text
                     words = str(msg.submission.selftext).split(" ")
                     for word in words:
                         if "https://" in word:
                             ctx, video_url = "selftxt_link", word
                             break
-                elif ("u/" + self.acc_info.user) in str(msg.body).lower() or ":" in msg.body:
+                else:
                     # else, assume they want the submission's video audio
                     video_url = str(msg.submission.url)
                     ctx = "video_submission"
-                else:
-                    print(msg.body, "> no context, skipping")
-                    msg.mark_read()
-                    raise misc.NoContext
-                return ctx, video_url
-        else:
+        elif not msg.was_comment:
             # for replies to PMs made by the bot
             try:
                 parent_pm = self.auth.inbox.message(msg.parent_id[3:])  # this gets the first pm in the thread
@@ -135,12 +132,12 @@ class Bot:
             for file in self.files_to_del:
                 # each file downloaded to check audio will be deleted in this for loop
                 # if 10 minutes have passed since they were downloaded
-                try:
-                    if file[1] < time.time():
+                if file[1] < time.time():
+                    try:
                         os.remove(file[0])
-                        self.files_to_del.remove(file)
-                except:
-                    pass
+                    except:
+                        pass
+                    self.files_to_del.remove(file)
             try:
                 for msg in self.auth.inbox.unread():
                     try:
@@ -180,13 +177,14 @@ class Bot:
                         if msg.was_comment:
                             if data['msg'] == "error" and msg.subreddit != "NameThatSong" and msg.subreddit != "WhatsThisSong":
                                 # by default don't reply on error, pm instead
-                                self.auth.redditor(str(msg.author)).message("No song found", misc.create_response(data, ctx, video_url, start, to) + "\n\n^(This is a response to your comment \"" + msg.body + "\" in r/" + str(msg.subreddit) + ")")
+                                self.auth.redditor(str(msg.author)).message("No song found", f"{misc.create_response(data, ctx, video_url, start, to)}\n\n^(This is a response to your comment) ^\"^[{msg.body}](https://reddit.com/r/{msg.subreddit}/comments/{msg.submission}/comment/{msg.id})\" ^(in r/" + str(msg.subreddit) + ")")
+
                             else:
                                 try:
                                     msg.reply(misc.create_response(data, ctx, video_url, start, to))
                                 except:
                                     try:
-                                        self.auth.redditor(str(msg.author)).message("I couldn't reply to your comment, here's a PM instead", misc.create_response(data, ctx, video_url, start, to) + "\n\n^(This is a response to your comment \"" + msg.body + "\" in r/" + str(msg.subreddit) + ")")
+                                        self.auth.redditor(str(msg.author)).message("I couldn't reply to your comment, here's a PM instead", f"{misc.create_response(data, ctx, video_url, start, to)}\n\n^(This is a response to your comment) ^\"^[{msg.body}](https://reddit.com/r/{msg.subreddit}/comments/{msg.submission}/comment/{msg.id})\" ^(in r/" + str(msg.subreddit) + ")")
                                     except:
                                         pass
                         else:

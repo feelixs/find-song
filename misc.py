@@ -5,8 +5,7 @@ import config
 import praw
 import traceback
 import time
-import youtube_dl
-import subprocess
+from difflib import SequenceMatcher
 from acrcloud.recognizer import ACRCloudRecognizer
 import json
 import os
@@ -222,8 +221,11 @@ def find_link_youtube_spotify(acr_data, input_time):
             name = str(r['name'])
             artist = str(r['artists'][0]['name'])
             url = str(r['external_urls']['spotify'])
-            if name.lower() == input_song and artist.lower() == input_artists:
+            songsimilar = SequenceMatcher(None, name.lower(), input_song).ratio()
+            artistsimilar = SequenceMatcher(None, artist.lower(), input_artists).ratio()
+            if songsimilar >= 0.8 and artistsimilar >= 0.8:
                 correct_url = url
+                print("spotify match", artistsimilar, songsimilar)
                 break
     if correct_url is None:
         correct_url = acr_create_link(str(acr_data["title"]), str(acr_data["artists"]), str(acr_data['acr_id']))
@@ -241,12 +243,59 @@ def find_link_spotify(acr_data, input_time):
         name = str(r['name'])
         artist = str(r['artists'][0]['name'])
         url = str(r['external_urls']['spotify'])
-        if name.lower() == input_song and artist.lower() == input_artists:
+        songsimilar = SequenceMatcher(None, name.lower(), input_song).ratio()
+        artistsimilar = SequenceMatcher(None, artist.lower(), input_artists).ratio()
+        if songsimilar >= 0.8 and artistsimilar >= 0.8:
             correct_url = url
+            print("spotify match", artistsimilar, songsimilar)
             break
     if correct_url is None:
         correct_url = acr_create_link(str(acr_data["title"]), str(acr_data["artists"]), str(acr_data['acr_id']))
     return correct_url
+
+
+def is_single_timestamp(msg: praw.Reddit.comment):
+    """Returns true if the comment contains ONLY a timestamp and no other text
+    valid timestamps:
+        0:01
+        0:0:01
+        0:01-0:11
+        0:0:01-0:0:11
+    this is used for checking if the bot should reply to a comment that doesn't contain its username"""
+    if not msg.was_comment:
+        return False
+    else:
+        b = msg.body
+        if "-" in b:
+            b = b.replace(" ", "-").split("-")
+            if len(b) != 2:
+                return False
+        else:
+            b = b.split(" ")
+            if len(b) > 1:
+                return False
+        print(b)
+        isint = False
+        for word in b:
+            isint = False
+            if ":" in word:
+                try:
+                    min, sec = word.split(":")
+                    min, sec = int(min), int(sec)
+                    isint = True
+                except:
+                    try:
+                        hour, min, sec = word.split(":")
+                        hour, min, sec = int(hour), int(min), int(sec)
+                        isint = True
+                    except:
+                        continue
+            else:
+                return False
+        if isint:
+            return True
+        else:
+            return False
 
 
 def create_response(acr_data, context, user_url, start_sec, end_sec) -> str:
@@ -503,20 +552,3 @@ def download_twitchclip(url, output_path=output_file):
     urllib.request.urlretrieve(mp4_url, output_path)
     return output_path
 
-
-def download_video(video_url, start=None, to=None):
-    video_url = str(video_url)
-    supported = 1
-    if 'v.redd.it' in video_url:  # for videos uploaded to reddit
-        url = video_url + "/DASH_audio.mp4"
-        of = download_reddit(url)
-    elif 'youtu.be' in video_url or 'youtube' in video_url:  # for youtube links
-        url = video_url
-        of = download_yt(url)
-    elif 'twitch.tv' in video_url:  # for twitch links
-        url = video_url
-        of = download_twitchclip(url)
-    else:  # for other links
-        supported = 0
-        of = 0
-    return supported, of
