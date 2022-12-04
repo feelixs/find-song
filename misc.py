@@ -304,7 +304,9 @@ def mstoMin(ms) -> str:
 
 def timestamptoSec(time_str) -> int:
     """Get Seconds from time."""
-    time_str = str(time_str)
+    time_str = str(time_str).replace(".", "").replace(",", "").replace(")", "").replace("(", "")
+    # incase they put punctuation after the timestamp (only checks most common ones)
+
     list = time_str.split(':')
     for item in list:
         try:
