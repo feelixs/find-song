@@ -54,13 +54,29 @@ class Bot:
                 return ctx, video_url
         else:
             # for replies to PMs made by the bot
-            parent_pm = self.auth.inbox.message(msg.parent_id[3:])  # this gets the first pm in the thread
-            if parent_pm.author == self.acc_info.user:  # check that the bot sent the first message in the pm thread
-                words = str(parent_pm.body).replace("\n", " ").replace(",", " ").split(" ")
-                for word in words:
-                    if ("youtu" in word and "https://" in word) or "twitch.tv" in word or "v.redd.it" in word or "tiktok.com" in word:  # make sure the parent has a compatible link
-                        ctx, video_url = "link_comment", word
-                        break
+            try:
+                parent_pm = self.auth.inbox.message(msg.parent_id[3:])  # this gets the first pm in the thread
+                if parent_pm.author == self.acc_info.user:  # check that the bot sent the first message in the pm thread
+                    words = str(parent_pm.body).replace("\n", " ").replace(",", " ").split(" ")
+                    for word in words:
+                        if ("youtu" in word and "https://" in word) or "twitch.tv" in word or "v.redd.it" in word or "tiktok.com" in word:  # make sure the parent has a compatible link
+                            ctx, video_url = "link_comment", word
+                            break
+            except TypeError:  # line 58 throws TypeError when there's no parent PM
+                # so it's a new PM
+                if msg.author is not None:
+                    # it was sent by a user
+                    words = str(msg.body).replace("\n", " ").replace(",", " ").split(" ")
+                    for word in words:
+                        if ("youtu" in word and "https://" in word) or "twitch.tv" in word or "v.redd.it" in word or "tiktok.com" in word:  # make sure the parent has a compatible link
+                            ctx, video_url = "link_comment", word
+                            break
+                else:
+                    # it's a subreddit message, ignore it
+                    pass
+        if ctx is None or video_url is None:
+            msg.mark_read()
+            raise misc.NoContext
         return ctx, video_url
 
     def find_timestamps(self, msg, video_url):
