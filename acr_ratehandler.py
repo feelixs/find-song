@@ -24,6 +24,7 @@ class Ratehandler:
         t = time.time()
         with open(self.RATE_FILE, "w") as rf:
             rf.write(str(t))
+        self.DATETIME_RESET = self.DATETIME_RESET = datetime.fromtimestamp(t)
         print("ACR Ratehandler: Time Reset!")
         self.reset_key_reqs()
         return t
@@ -72,4 +73,3 @@ class Ratehandler:
             print("ACR Ratehandler: Day has passed!")
             self.reset_time()
         return b
-
