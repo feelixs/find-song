@@ -28,7 +28,7 @@ class NoContext(Exception):
     pass
 
 
-class InvalidTikLink(Exception):
+class InvalidLink(Exception):
     pass
 
 
@@ -323,7 +323,7 @@ def create_response(acr_data, context, user_url, start_sec, end_sec) -> str:
     if context == "link_parent":
         response += "\n\n*Looks like you wanted the song from your parent comment's [link](" + user_url + "). I searched from " + str(start_sec) + "-" + str(end_sec) + "*.\n\n*You can provide a timestamp to search somewhere else.*"
     elif context == "link_comment":
-        response += "\n\n*Looks like you gave me a [a link](" + user_url + ") to watch. I searched from " + str(start_sec) + "-" + str(end_sec) + "*.\n\n*You can provide a timestamp to search somewhere else.*"
+        response += "\n\n*Looks like you gave me [a link](" + user_url + ") to watch. I searched from " + str(start_sec) + "-" + str(end_sec) + "*.\n\n*You can provide a timestamp to search somewhere else.*"
     elif context == "selftxt_link":
         response += "\n\n*Looks like you wanted the song from [a link](" + user_url + ") in the submission. I searched from " + str(start_sec) + "-" + str(end_sec) + "*.\n\n*You can provide a timestamp to search somewhere else.*"
     elif context == "video_submission":
@@ -435,6 +435,7 @@ def get_yt_link_time(url) -> int:
 
 
 def clear_formatting(string) -> str:
+    string = string.replace("*", "")
     word = ""
     if "]" in string:
         skip_text = False
@@ -491,7 +492,7 @@ def parse_tiktok_link(link: str) -> int:
     try:
         vidid = link.split("/")[5]
     except:
-        raise InvalidTikLink
+        raise InvalidLink
     try:
         # if there's a ? after the id
         vidid = vidid.split("?")[0]

@@ -30,6 +30,8 @@ class Bot:
                         if ("youtu" in word and "https://" in word) or "twitch.tv" in word or "v.redd.it" in word or "tiktok.com" in word:  # make sure the parent has a compatible link
                             ctx, video_url = "link_parent", word
                             break
+                else:
+                    raise AttributeError  # if there's no link in parent comment, jump to except statement
             except AttributeError:  # if the comment has no parent
                 # it raises AttributeError: 'Submission' object has no attribute 'body'
                 if "https://" in str(msg.body):  # if the original message has a link
