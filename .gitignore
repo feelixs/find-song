@@ -1,9 +1,1 @@
-
-config.py
-output.mp4
-comments.txt
-rmPms.txt
-errors.txt
-*.pyc
-
-debug.log
+.idea/
