@@ -7,12 +7,10 @@ import config
 import praw
 import traceback
 import time
-from bs4 import BeautifulSoup
 import autoit
 import os
 from acrcloud.recognizer import ACRCloudRecognizer
 import json
-import os
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 from pytube import YouTube
@@ -804,18 +802,6 @@ def download_yt(link):
     except:
         raise InvalidLink
     return of
-
-
-def click_pull_git():
-    # click refresh and pull
-    try:
-        autoit.win_activate("GitHub Desktop")
-    except:
-        pass
-    time.sleep(1)
-    autoit.mouse_click(x=652, y=145)
-    time.sleep(5)
-    autoit.mouse_click(x=652, y=145)
 
 
 def get_voc_id(link) -> str:
